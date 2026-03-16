@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "SiteSettings": {
+      "title": "Site Settings",
+      "description": "Global configuration for the WFIRM Korea website",
+      "type": "object",
+      "properties": {
+        "heroTitle": { "type": "string", "description": "Main headline of the site" },
+        "heroDescription": { "type": "string", "description": "Sub-headline or description" },
+        "videoUrl": { "type": "string", "description": "YouTube video URL for the opening ceremony" },
+        "heroImage": { "type": "string", "description": "Base64 or URL of the main hero image" },
+        "officeImage": { "type": "string", "description": "Base64 or URL of the office image" },
+        "location": { "type": "string", "description": "Office address" },
+        "contact": { "type": "string", "description": "Contact information" },
+        "openingCeremonyImages": { "type": "array", "items": { "type": "string" }, "description": "6 images from the opening ceremony" },
+        "officeViewImages": { "type": "array", "items": { "type": "string" }, "description": "3 images of the office view" }
+      },
+      "required": ["heroTitle", "heroDescription"]
+    },
+    "BioTrend": {
+      "title": "Bio Trend Data",
+      "description": "Data points for the bio trend dashboard charts",
+      "type": "object",
+      "properties": {
+        "keyword": { "type": "string", "description": "Keyword like Exosome, Cell Therapy" },
+        "marketShare": { "type": "number", "description": "Market share percentage" },
+        "growthRate": { "type": "array", "items": { "type": "number" }, "description": "Yearly growth rates" },
+        "connectivity": { "type": "number", "description": "Gyeongbuk industry connectivity (1-5)" }
+      },
+      "required": ["keyword", "marketShare", "growthRate", "connectivity"]
+    }
+  },
+  "firestore": {
+    "settings/global": {
+      "schema": "SiteSettings",
+      "description": "Global site configuration"
+    },
+    "trends/{trendId}": {
+      "schema": "BioTrend",
+      "description": "Bio trend data points"
+    }
+  }
+}

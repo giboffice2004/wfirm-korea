@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: settings
+    // Document ID: global
+    // Fields:
+    //   - heroTitle: string (required)
+    //   - heroDescription: string (required)
+    //   - videoUrl: string
+    //   - heroImage: string
+    //   - officeImage: string
+    //   - location: string
+    //   - contact: string
+    //
+    // Collection: trends
+    // Document ID: auto-generated
+    // Fields:
+    //   - keyword: string (required)
+    //   - marketShare: number (required)
+    //   - growthRate: list (required)
+    //   - connectivity: number (required)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "leejeongrak21@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidSettings(data) {
+      return data.heroTitle is string && data.heroTitle.size() > 0 && data.heroTitle.size() < 200 &&
+             data.heroDescription is string && data.heroDescription.size() < 1000 &&
+             data.openingCeremonyImages is list && data.openingCeremonyImages.size() <= 6 &&
+             data.officeViewImages is list && data.officeViewImages.size() <= 3;
+    }
+
+    function isValidTrend(data) {
+      return data.keyword is string && data.keyword.size() > 0 &&
+             data.marketShare is number && data.marketShare >= 0 && data.marketShare <= 100 &&
+             data.growthRate is list && data.growthRate.size() > 0 &&
+             data.connectivity is number && data.connectivity >= 1 && data.connectivity <= 5;
+    }
+
+    // Rules
+    match /settings/global {
+      allow read: if true;
+      allow write: if isAdmin() && isValidSettings(request.resource.data);
+    }
+
+    match /trends/{trendId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidTrend(request.resource.data);
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAdmin();
+    }
+  }
+}
