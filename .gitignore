@@ -1,0 +1,10 @@
+# Firebase 임시 파일
+.firebase/
+
+# OS 생성 파일
+Thumbs.db
+.DS_Store
+
+# 로그 및 환경 설정
+*.log
+.env

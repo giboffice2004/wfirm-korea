@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>🎊WFIRM Korea 추진사무국🎊</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;800;900&family=Noto+Sans+KR:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <!-- Cloudinary Widget -->
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+    
+    <link rel="stylesheet" href="src/css/main.css?v=1.2">
+</head>
+<body>
+
+<nav id="main-nav">
+    <div class="nav-container">
+        <a href="#" class="logo">🎊 WFIRM KOREA 추진사무국 🎊</a>
+        <ul class="nav-menu">
+            <li><a href="#about">소개</a></li>
+            <li><a href="#news">최신동향</a></li>
+            <li><a href="#video">영상</a></li>
+            <li><a href="#gallery">사진</a></li>
+            <li><a href="#schedule">안내</a></li>
+        </ul>
+        <button class="hamburger" id="hamburger-btn" aria-label="메뉴 열기"><span></span><span></span><span></span></button>
+    </div>
+</nav>
+
+<header id="hero">
+    <div class="hero-slides" id="hero-slides-container"></div>
+    <div class="hero-overlay"></div>
+    <p id="hero-subtitle" class="reveal"></p>
+    <h1 id="hero-title" class="reveal"></h1>
+    <a href="#video" class="btn-main reveal">🎞️ 개소식 보도자료 영상 보기</a>
+</header>
+
+<section id="about" class="reveal">
+    <div class="container">
+        <h2 class="section-title" id="secAbout-title">사무국 소개</h2>
+        <div class="intro-wrapper">
+            <div class="intro-image">
+                <i class="fa-solid fa-dna"></i>
+                <h3>Advanced Regenerative Medicine</h3>
+                <p>WFIRM Korea Research Hub</p>
+            </div>
+            <div class="intro-text">
+                <div id="intro-body"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-full">
+    <section id="news" class="reveal">
+        <div class="container">
+            <h2 class="section-title" id="secNews-title">🔬 재생의료산업 최신 동향</h2>
+            <div class="news-grid" id="news-container"></div>
+            <div class="pagination-wrap" id="news-pagination"></div>
+        </div>
+    </section>
+</div>
+
+<section id="video" class="reveal">
+    <div class="container">
+        <h2 class="section-title" id="secVideo-title">개소식 보도자료 영상</h2>
+        <div style="position:relative;padding-bottom:56.25%;height:0;
+                    border-radius:var(--radius-lg);overflow:hidden;
+                    box-shadow:0 10px 30px rgba(0,0,0,0.1);background:#000;">
+            <iframe id="youtube-iframe" src="" frameborder="0" allowfullscreen style="position:absolute; inset:0; width:100%; height:100%;"></iframe>
+        </div>
+    </div>
+</section>
+
+<section id="gallery" class="reveal">
+    <div class="container">
+        <h2 class="section-title" id="galT1-title">WFIRM Korea 사진</h2>
+        <div class="gallery-grid" id="ceremony-container"></div>
+        <div class="pagination-wrap" id="gallery-pagination"></div>
+    </div>
+</section>
+
+<section id="schedule" class="reveal">
+    <div class="container">
+        <h2 class="section-title" id="secSchedule-title">추진 사무국 안내</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <i class="fa-regular fa-clock"></i>
+                <h3>근무시간</h3>
+                <p id="txt-sched-date"></p>
+            </div>
+            <div class="info-card">
+                <i class="fa-solid fa-location-dot"></i>
+                <h3>장소</h3>
+                <p id="txt-sched-loc"></p>
+            </div>
+            <div class="info-card">
+                <i class="fa-solid fa-paper-plane"></i>
+                <h3>문의</h3>
+                <p id="txt-sched-contact"></p>
+            </div>
+        </div>
+        <div class="gallery-grid" id="office-container" style="margin-top:50px;"></div>
+    </div>
+</section>
+
+<footer>
+    <p>&copy; 2026 WFIRM Korea Promotion Office. All Rights Reserved.</p>
+    <p style="font-size:12px; opacity:.65; margin-top:12px;">
+        본 페이지는 WFIRM Korea 임시 홈페이지입니다.
+        <span style="display:inline-block; margin-left:8px;">
+            <i class="fa-solid fa-gear" id="admin-btn-trigger" title="관리자 전용"></i>
+        </span>
+    </p>
+</footer>
+
+<div id="lightbox" onclick="this.classList.remove('open')">
+    <img id="lightbox-img" src="" alt="확대 이미지">
+</div>
+
+<!-- Admin Panel -->
+<div id="admin-panel">
+    <div class="admin-header">
+        <h3 style="font-weight:900;">⚙️ Global System Hub</h3>
+        <span class="admin-close-x" id="btn-admin-close-x">&times;</span>
+    </div>
+    <div style="padding:45px;">
+        <div class="admin-group">
+            <h4 style="border-left:6px solid var(--accent); padding-left:15px; margin-bottom:20px;">1. 비주얼 테마 및 배경 설정</h4>
+            <div id="adm-hero-list"></div>
+            <button class="add-btn" onclick="addSlot('h')">+ 배경 이미지 추가</button>
+            <label style="display:block; margin-top:20px; font-weight:800; font-size:13px;">유튜브 비디오 ID</label>
+            <input type="text" id="cfg-yt-id" class="admin-input">
+        </div>
+        
+        <div id="admin-text-inputs"></div>
+        
+        <div class="admin-group">
+            <h4 style="border-left:6px solid var(--accent); padding-left:15px; margin-bottom:20px;">3. 📷 사진첩 관리 (행사용)</h4>
+            <div id="adm-img-list-c"></div>
+            <button class="add-btn" onclick="addSlot('c')">+ 사진 슬롯 추가</button>
+        </div>
+        
+        <div class="admin-group">
+            <h4 style="border-left:6px solid var(--accent); padding-left:15px; margin-bottom:20px;">4. 🏢 사무국 시설 관리</h4>
+            <div id="adm-img-list-o"></div>
+            <button class="add-btn" onclick="addSlot('o')">+ 사진 슬롯 추가</button>
+        </div>
+        
+        <div class="admin-group">
+            <h4 style="border-left:6px solid var(--accent); padding-left:15px; margin-bottom:20px;">5. 🔬 최신 동향 관리</h4>
+            <div id="adm-news-list"></div>
+            <button class="add-btn" onclick="addSlot('n')">+ 뉴스 카드 추가</button>
+        </div>
+
+        <button class="admin-save-btn" id="btn-final-save">Deploy Global Sync</button>
+        <p id="save-status" style="display:none; text-align:center; margin-top:15px; font-weight:900;"></p>
+        <button id="btn-admin-close-bottom" style="width:100%; border:none; background:#f1f5f9; padding:20px; border-radius:15px; cursor:pointer; font-weight:700; color:#64748b; margin-top:15px;">Exit Hub</button>
+    </div>
+</div>
+
+<div id="login-overlay">
+    <div class="login-box" style="position:relative;">
+        <span id="btn-login-close" style="position:absolute; top:15px; right:20px; font-size:35px; cursor:pointer; color:var(--primary); font-weight:900; transition:0.3s; z-index:100;">&times;</span>
+        <h3 style="font-weight:900; font-size:24px; margin-bottom:30px;">System Authentication</h3>
+        <input type="text" id="login-id" class="admin-input" placeholder="Admin ID">
+        <input type="password" id="login-pw" class="admin-input" placeholder="Security Key">
+        <button id="btn-login-submit" class="admin-save-btn" style="margin-top:15px;">Secure Sign In</button>
+        <p id="login-error" style="color:#ff4d4d; display:none; margin-top:15px; font-weight:800;">Verification Failed.</p>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="src/js/render.js?v=1.2"></script>
+<script src="src/js/main.js?v=1.2"></script>
+</body>
+</html>
