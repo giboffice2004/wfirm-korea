@@ -9,6 +9,7 @@ const GALLERY_PER_PAGE = 6;
 const textFields = [
     { id:'heroTitle',    targetId:'hero-title', label:'메인 타이틀', h:60, def:'<span>첨단재생의료산업</span><br><span class="hl">WFIRM Korea</span> <span>추진사무국</span>', sz:'', col:'#ffffff', align:'center', font:"'Inter',sans-serif" },
     { id:'heroSub',      targetId:'hero-subtitle', label:'서브 타이틀', h:40, def:'INNOVATIVE BIO-INDUSTRY HUB', sz:'', col:'#64ffda', align:'center', font:"'Inter',sans-serif" },
+    { id:'heroBtn',      targetId:'hero-btn-text', label:'메인 버튼 텍스트', h:40, def:'🎞️ 개소식 보도자료 영상 보기', sz:'17.5px', col:'#0a192f', align:'center', font:"'Noto Sans KR',sans-serif" },
     { id:'introBody',    targetId:'intro-body', label:'소개 본문', h:120, def:'<span class="hl-dark" style="font-size:24px; color:#0044cc; line-height:1.4;">"경상북도가 글로벌 재생의료의 표준을 세웁니다."</span>\n\n안녕하십니까? WFIRM Korea 추진 사무국 방문을 진심으로 환영합니다.\n\n경상북도가 글로벌 재생의료 거점으로 도약하기 위한 첫 단추인 <span class="hl-dark">\'WFIRM Korea 추진 사무국\'</span>이 대한민국 바이오 산업의 혁신을 주도합니다.\n\n첨단재생의료는 인류의 난치병 극복을 위한 꿈의 기술이자, 국가의 미래를 결정지을 핵심 전략 산업입니다. 경상북도는 세계 최고 수준의 재생의학 역량을 보유한 <span class="hl-dark">\'미국 웨이크포레스트 재생의학연구소(WFIRM)\'</span>와 전략적 파트너십을 구축하여, 대한민국을 넘어 아시아를 대표하는 재생의료 허브로 도약하고자 합니다.\n\n경북의 탄탄한 바이오 인프라와 글로벌 기술력이 만나는 이곳에서, 미래 산업의 새로운 이정표를 세우겠습니다. 여러분의 적극적인 성원과 협력을 기대합니다.\n\n<span style="display:block;text-align:right;font-weight:900;color:var(--primary);margin-top:25px;font-size:18px;">- WFIRM Korea 추진 사무국 -</span>', sz:'19.5px', col:'#0a192f', align:'left', font:"'Noto Sans KR',sans-serif" },
     { id:'secAbout',     targetId:'secAbout-title', label:'사무국 소개 제목', h:40, def:'사무국 소개', sz:'36px', col:'#0a192f', align:'center', font:"'Noto Sans KR',sans-serif" },
     { id:'secVideo',     targetId:'secVideo-title', label:'영상 섹션 제목', h:40, def:'개소식 보도자료 영상', sz:'36px', col:'#0a192f', align:'center', font:"'Noto Sans KR',sans-serif" },
@@ -65,8 +66,21 @@ function renderAll() {
         }
     });
     
-    const yt = document.getElementById('youtube-iframe');
-    if(yt) yt.src = `https://www.youtube.com/embed/${appState.content.ytId}?rel=0`;
+    // 3. Multi-Video Rendering
+    const ytContainer = document.getElementById('yt-container');
+    if(ytContainer) {
+        ytContainer.innerHTML = '';
+        const ytIds = appState.content.ytIds || (appState.content.ytId ? [appState.content.ytId] : []);
+        ytIds.forEach(id => {
+            const wrapper = document.createElement('div');
+            wrapper.style = "position:relative; padding-bottom:56.25%; height:0; border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1); background:#000; margin-bottom:30px;";
+            wrapper.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?rel=0" frameborder="0" allowfullscreen style="position:absolute; inset:0; width:100%; height:100%;"></iframe>`;
+            ytContainer.appendChild(wrapper);
+        });
+    }
+    
+    // 4. Dynamic Extra Texts Rendering
+    renderDynamicTexts();
     
     renderNews(1);
     renderGallery(1, 'ceremony', 'ceremony-container', 'gallery-pagination');
@@ -142,4 +156,32 @@ function renderGallery(page, key, containerId, paginId) {
             }
         }
     }
+}
+
+function renderDynamicTexts() {
+    const container = document.getElementById('dynamic-extra-sections');
+    if(!container) return;
+    
+    container.innerHTML = '';
+    (appState.dynamicTexts || []).forEach(t => {
+        const sec = document.createElement('section');
+        sec.className = 'reveal dynamic-text-section';
+        sec.innerHTML = `
+            <div class="container">
+                <h2 class="section-title">${t.title}</h2>
+                <div class="intro-wrapper">
+                    <div class="intro-text" style="width:100%; border-radius:var(--radius-lg);">
+                        ${t.body.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(sec);
+        
+        // Immediate apply Intersection Observer for new elements
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if(entry.isIntersecting) entry.target.classList.add('active'); });
+        }, { threshold: 0.1 });
+        observer.observe(sec);
+    });
 }

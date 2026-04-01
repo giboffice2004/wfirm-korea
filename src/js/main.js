@@ -54,11 +54,18 @@ function openCloudinaryWidget(targetInput, btn) {
 let appState = {};
 
 async function loadData() {
-    try {
         const snap = await db.ref('wfirm').once('value');
         const data = snap.val();
-        if (data) appState = data; else initDefaultState();
-    } catch(e) { initDefaultState(); }
+        if (data) {
+            appState = data;
+            // Migration: ytId (String) -> ytIds (Array)
+            if (appState.content && appState.content.ytId && !appState.content.ytIds) {
+                appState.content.ytIds = [appState.content.ytId];
+            }
+            if (!appState.dynamicTexts) appState.dynamicTexts = [];
+        } else {
+            initDefaultState();
+        }
     renderAll();
     syncToAdmin();
 }
@@ -73,9 +80,10 @@ function initDefaultState() {
                 'https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?auto=format&fit=crop&q=80&w=2000'
             ] 
         },
-        content: { ytId: 'VHE52iEaPJ4' },
+        content: { ytIds: ['VHE52iEaPJ4'] },
         images: { ceremony: [], ceremonyDesc: [], office: [], officeDesc: [] },
-        news: []
+        news: [],
+        dynamicTexts: []
     };
     ['1','3','4','5','6'].forEach((n, i) => {
         appState.images.ceremony[i]     = `${BASE}${n}.jpg?raw=true`;
@@ -94,7 +102,14 @@ function initDefaultState() {
 
 // Global Slot Management for Admin Panel
 window.addSlot = function(type) {
-    const listMap = { 'c':'adm-img-list-c', 'o':'adm-img-list-o', 'n':'adm-news-list', 'h':'adm-hero-list' };
+    const listMap = { 
+        'c':'adm-img-list-c', 
+        'o':'adm-img-list-o', 
+        'n':'adm-news-list', 
+        'h':'adm-hero-list',
+        'v':'adm-yt-list',
+        't':'adm-extra-text-list'
+    };
     const container = document.getElementById(listMap[type]);
     if(!container) return;
 
@@ -104,6 +119,10 @@ window.addSlot = function(type) {
     let content = '';
     if(type==='n') {
         content = `<div style="display:flex; gap:10px;"><input type="text" class="admin-input news-date" placeholder="2000-00-00"><input type="text" class="admin-input news-tag" placeholder="출처/분류"></div><input type="text" class="admin-input news-title" placeholder="뉴스 제목"><input type="text" class="admin-input news-url" placeholder="원본 링크 URL">`;
+    } else if(type==='v') {
+        content = `<input type="text" class="admin-input yt-id-val" placeholder="유튜브 비디오 ID (예: VHE52iEaPJ4)">`;
+    } else if(type==='t') {
+        content = `<input type="text" class="admin-input extra-text-title" placeholder="카테고리 제목 (예: 추가 안내 사항)"><textarea class="admin-input extra-text-body" style="height:100px;" placeholder="본문 내용을 입력하세요."></textarea>`;
     } else if(type==='h') {
         content = `
             <div style="display:flex; gap:8px;">
@@ -133,9 +152,17 @@ window.addSlot = function(type) {
 };
 
 function syncToAdmin() {
-    const ytId = document.getElementById('cfg-yt-id');
-    if (ytId) ytId.value = appState.content.ytId || '';
-    
+    // Video IDs Sync
+    const ytList = document.getElementById('adm-yt-list');
+    if (ytList) {
+        ytList.innerHTML = '';
+        const ids = appState.content.ytIds || (appState.content.ytId ? [appState.content.ytId] : []);
+        ids.forEach(id => {
+            window.addSlot('v');
+            ytList.lastChild.querySelector('.yt-id-val').value = id;
+        });
+    }
+
     // Backgrounds Sync
     const heroList = document.getElementById('adm-hero-list');
     if (heroList) {
@@ -183,6 +210,17 @@ function syncToAdmin() {
             g.querySelector('.news-url').value = n.url;
         });
     }
+
+    const extraTextList = document.getElementById('adm-extra-text-list');
+    if(extraTextList) {
+        extraTextList.innerHTML = '';
+        (appState.dynamicTexts || []).forEach(t => {
+            window.addSlot('t');
+            const g = extraTextList.lastChild;
+            g.querySelector('.extra-text-title').value = t.title;
+            g.querySelector('.extra-text-body').value = t.body;
+        });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -220,9 +258,10 @@ document.addEventListener('DOMContentLoaded', () => {
         status.innerText = 'Synchronizing...'; 
         status.style.display = 'block';
 
-        // Collect Backgrounds
-        appState.theme.bgImages = Array.from(document.querySelectorAll('.hero-bg-url')).map(i => i.value).filter(v => v);
-        appState.content.ytId = document.getElementById('cfg-yt-id').value;
+        // Collect Videos
+        appState.content.ytIds = Array.from(document.querySelectorAll('.yt-id-val')).map(i => i.value).filter(v => v);
+        // Deprecated single ytId for old code compatibility
+        appState.content.ytId = appState.content.ytIds[0] || '';
 
         // Collect Texts
         textFields.forEach(f => {
@@ -246,13 +285,18 @@ document.addEventListener('DOMContentLoaded', () => {
         collectImgs('adm-img-list-c', 'ceremony');
         collectImgs('adm-img-list-o', 'office');
 
-        // Collect News
         appState.news = Array.from(document.querySelectorAll('#adm-news-list > div')).map(div => ({
             date:  div.querySelector('.news-date').value,
             tag:   div.querySelector('.news-tag').value,
             title: div.querySelector('.news-title').value,
             url:   div.querySelector('.news-url').value
         })).filter(n => n.title);
+
+        // Collect Dynamic Texts
+        appState.dynamicTexts = Array.from(document.querySelectorAll('#adm-extra-text-list > div')).map(div => ({
+            title: div.querySelector('.extra-text-title').value,
+            body:  div.querySelector('.extra-text-body').value
+        })).filter(t => t.title || t.body);
 
         try {
             await db.ref('wfirm').set(appState);
