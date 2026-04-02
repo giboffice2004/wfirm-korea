@@ -3,14 +3,13 @@
 ============================================================ */
 
 const firebaseConfig = {
-    apiKey:            "AIzaSyAkCKsDWX2ctlSYqGdZGF5URg0-BjmXWuk",
-    authDomain:        "wfirm-korea-61be3.firebaseapp.com",
-    databaseURL:       "https://wfirm-korea-61be3-default-rtdb.asia-southeast1.firebasedatabase.app/",
-    projectId:         "wfirm-korea-61be3",
-    storageBucket:     "wfirm-korea-61be3.firebasestorage.app",
-    messagingSenderId: "407704076900",
-    appId:             "1:407704076900:web:33d5fa1f9b3f96202a5571",
-    measurementId:     "G-WKR93VJ02B"
+    apiKey:            "AIzaSyBNsFQ6viuZPRBkuawhZg66B9rrqhsIGe0",
+    authDomain:        "wfirm-korea.firebaseapp.com",
+    databaseURL:       "https://wfirm-korea-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    projectId:         "wfirm-korea",
+    storageBucket:     "wfirm-korea.firebasestorage.app",
+    messagingSenderId: "968670622632",
+    appId:             "1:968670622632:web:bd7a016ef5803e3174e39d"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -54,6 +53,7 @@ function openCloudinaryWidget(targetInput, btn) {
 let appState = {};
 
 async function loadData() {
+    try {
         const snap = await db.ref('wfirm').once('value');
         const data = snap.val();
         if (data) {
@@ -64,8 +64,13 @@ async function loadData() {
             }
             if (!appState.dynamicTexts) appState.dynamicTexts = [];
         } else {
+            console.warn("No data found in database. Initializing default state.");
             initDefaultState();
         }
+    } catch (e) {
+        console.error("Firebase data load failed:", e);
+        initDefaultState();
+    }
     renderAll();
     syncToAdmin();
 }
