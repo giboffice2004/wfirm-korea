@@ -209,7 +209,7 @@ footer { background: var(--primary); color: rgba(255,255,255,0.6); text-align: c
         overflow-x: auto; 
         width: 100%; 
         padding: 5px 10px 10px; 
-        justify-content: flex-start;
+        justify-content: center;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
     }
