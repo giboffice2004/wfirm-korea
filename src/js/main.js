@@ -90,9 +90,9 @@ function initDefaultState() {
         news: [],
         dynamicTexts: []
     };
-    ['1','3','4','5','6'].forEach((n, i) => {
+    ['1','2','3','4','5','6'].forEach((n, i) => {
         appState.images.ceremony[i]     = `${BASE}${n}.jpg?raw=true`;
-        appState.images.ceremonyDesc[i] = ['개소식 단체','환영사','MOU 체결식','토론회','단체 사진'][i];
+        appState.images.ceremonyDesc[i] = ['개소식 단체','현판 제막식','환영사','MOU 체결식','토론회','단체 사진'][i];
     });
     ['a','b','c'].forEach((n, i) => {
         appState.images.office[i]     = `${BASE}${n}${n === 'a' ? '.jpg' : '.JPG'}?raw=true`;
