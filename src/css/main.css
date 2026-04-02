@@ -63,7 +63,7 @@ body {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
 }
 .nav-menu { display: flex; gap: 32px; list-style: none; }
-.nav-menu a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14.5px; font-weight: 700; transition: 0.3s; }
+.nav-menu a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14.5px; font-weight: 700; transition: 0.3s; white-space: nowrap; }
 .nav-menu a:hover { color: var(--accent); }
 
 /* Hero Section - Ken Burns Engine Styles */
@@ -200,16 +200,37 @@ section { padding: clamp(60px, 12vw, 100px) 24px; max-width: 1240px; margin: 0 a
 footer { background: var(--primary); color: rgba(255,255,255,0.6); text-align: center; padding: 120px 24px; font-size: 15px; border-top: 1.5px solid rgba(255,255,255,0.05); }
 
 @media (max-width: 950px) {
-    .nav-menu { display: none; }
+    #main-nav { height:auto; padding: 15px 0; }
+    .nav-container { flex-direction: column; gap: 15px; }
+    .logo { margin-bottom: 5px; }
+    .nav-menu { 
+        display: flex; 
+        gap: 20px; 
+        overflow-x: auto; 
+        width: 100%; 
+        padding: 5px 10px 10px; 
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .nav-menu::-webkit-scrollbar { display: none; }
+    .nav-menu li { flex: 0 0 auto; }
+    
     .intro-wrapper { grid-template-columns: 1fr; }
+    .intro-text { text-align: center; }
     .info-grid { grid-template-columns: 1fr; gap: 24px; }
     .news-grid, .gallery-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .section-title { text-align: center; }
 }
 @media (max-width: 550px) {
-    .intro-text { padding: 45px 24px; }
-    #hero { padding: 80px 15px; }
-    .section-title { margin-bottom: 40px; }
+    .intro-text { padding: 45px 24px; text-align: center; }
+    #hero { padding: 80px 15px; text-align: center; }
+    #hero-title { padding: 0; }
+    .section-title { margin-bottom: 40px; text-align: center; }
     .btn-main { padding: 18px 32px; font-size: 16px; width: 100%; justify-content: center; }
+    .news-card { padding: 30px 20px; text-align: center; }
+    .news-meta { justify-content: center; gap: 15px; }
+    .info-card { padding: 50px 24px; }
 }
 
 /* ── Administration UI (Premium Side Panel) ───────────────── */
