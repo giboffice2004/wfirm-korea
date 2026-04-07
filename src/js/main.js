@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Immediate Execution Logic (Manual Trigger - High failure probability via CORS)
+    // Immediate Execution Logic (Manual Trigger via rss2json)
     const scrapNowBtn = document.getElementById('btn-scrap-now');
     if (scrapNowBtn) {
         scrapNowBtn.onclick = async () => {
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const keyword = document.getElementById('scrap-keyword').value.trim() || "재생의료";
             const periodVal = document.getElementById('scrap-period').value;
             
-            status.innerText = `📡 1회성 강제 수집 시도 중... (구글 뉴스)`;
+            status.innerText = `📡 구글 뉴스 검색 중... (${keyword})`;
             status.style.display = 'block';
             status.style.color = '#4338ca';
             scrapNowBtn.disabled = true;
@@ -384,61 +384,29 @@ document.addEventListener('DOMContentLoaded', () => {
             if (periodVal) {
                 query += ` when:${periodVal}`;
             }
-            const targetUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
-
-            const proxies = [
-                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                (url) => `https://api.codetabs.com/v1/proxy?url=${encodeURIComponent(url)}`
-            ];
-
-            let xmlText = "";
-            let success = false;
-
-            for (const getProxyUrl of proxies) {
-                try {
-                    const proxyUrl = getProxyUrl(targetUrl);
-                    const response = await fetch(proxyUrl, { cache: 'no-store' });
-                    if (response.ok) {
-                        xmlText = await response.text();
-                        if (xmlText && xmlText.includes('<item>')) {
-                            success = true;
-                            break;
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Proxy attempt failed, trying next...");
-                }
-            }
-
-            if (!success) {
-                status.innerText = '❌ 수집 실패 (브라우저 정책/프록시 서버 차단).\n→ 설정 저장 시 서버가 내일 아침 무조건 찾아옵니다.';
-                status.style.color = '#ef4444';
-                setTimeout(() => {
-                    status.style.display = 'none';
-                    scrapNowBtn.disabled = false;
-                }, 5000);
-                return;
-            }
+            const googleNewsUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
+            const targetUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleNewsUrl)}&api_key=`;
 
             try {
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-                const items = xmlDoc.querySelectorAll('item');
+                const response = await fetch(targetUrl, { cache: 'no-store' });
+                const json = await response.json();
+
+                if (json.status !== 'ok' || !json.items) {
+                    throw new Error("RSS 데이터를 가져오지 못했습니다.");
+                }
+
                 let addedCount = 0;
-                
                 if (!appState.news) appState.news = [];
                 const existingTitles = new Set(appState.news.map(n => n.title));
 
-                items.forEach((item, idx) => {
-                    if (idx >= 10) return;
-
-                    const title = item.querySelector('title')?.textContent.trim() || "";
-                    const link = item.querySelector('link')?.textContent.trim() || "";
-                    const pubDate = item.querySelector('pubDate')?.textContent || "";
+                json.items.slice(0, 10).forEach(item => {
+                    const title = item.title || "";
+                    const link = item.link || "";
+                    const pubDate = item.pubDate || "";
                     
                     if (title && link) {
-                        let dateObj = new Date(pubDate);
+                        // Date parsing (rss2json returns "YYYY-MM-DD HH:mm:ss" format)
+                        let dateObj = new Date(pubDate.replace(/-/g, '/'));
                         if (isNaN(dateObj.getTime())) dateObj = new Date();
                         
                         const yyyy = dateObj.getFullYear();
@@ -446,14 +414,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         const dd = String(dateObj.getDate()).padStart(2, '0');
                         const dateFormatted = `${yyyy}-${mm}-${dd}`;
 
-                        if (!existingTitles.has(title)) {
+                        // HTML Entity Decoding
+                        const tempDiv = document.createElement("div");
+                        tempDiv.innerHTML = title;
+                        const decodedTitle = tempDiv.textContent || tempDiv.innerText || "";
+
+                        if (!existingTitles.has(decodedTitle)) {
                             appState.news.unshift({
                                 date: dateFormatted,
                                 tag: 'NEWS',
-                                title: title,
+                                title: decodedTitle,
                                 url: link
                             });
-                            existingTitles.add(title);
+                            existingTitles.add(decodedTitle);
                             addedCount++;
                         }
                     }
@@ -465,11 +438,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     syncToAdmin(); 
                     renderNews(1); 
                 } else {
-                    status.innerText = 'ℹ️ 추가할 새로운 소식이 없습니다.';
+                    status.innerText = 'ℹ️ 이미 최신 상태이거나 새로 추가할 소식이 없습니다.';
                 }
             } catch (e) {
-                console.error(e);
-                status.innerText = '❌ 데이터 분석 중 오류 발생';
+                console.error("수집 오류:", e);
+                status.innerText = '❌ 수집 실패 (네트워크 연결 혹은 파싱 오류 발생)';
+                status.style.color = '#ef4444';
             }
 
             setTimeout(() => {
