@@ -328,13 +328,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const query = "재생의료 " + (new Date().getFullYear());
-                const url = `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(query)}&sm=tab_opt&sort=1`;
-                const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+                const targetUrl = `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(query)}&sm=tab_opt&sort=1`;
+                
+                // 더 안정적인 프록시 서버 시도 (corsproxy.io)
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
                 
                 const response = await fetch(proxyUrl);
-                const data = await response.json();
+                if (!response.ok) throw new Error('Network error');
+                
+                const htmlText = await response.text();
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(data.contents, "text/html");
+                const doc = parser.parseFromString(htmlText, "text/html");
                 
                 // 더 범용적인 선택자 사용 (li.bx 또는 .news_area)
                 const items = doc.querySelectorAll('li.bx, .news_area');
