@@ -1,0 +1,31 @@
+name: Daily News Scrape
+
+on:
+  schedule:
+    # 매일 한국시간(KST) 오전 9:00 = UTC 0:00
+    - cron: '0 0 * * *'
+  
+  # 관리자가 GitHub 환경에서 언제든 강제 실행 가능하도록 허용
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 저장소 코드 체크아웃
+        uses: actions/checkout@v3
+
+      - name: Node.js 18 환경 설정
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: 의존성 패키지 설치
+        run: npm ci || npm install
+        
+      - name: 뉴스 백엔드 자동 수집 구동 (Firebase 업데이트)
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/scrapeNews.js

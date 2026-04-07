@@ -209,12 +209,19 @@ function syncToAdmin() {
         (appState.news || []).forEach(n => {
             window.addSlot('n');
             const g = newsList.lastChild;
-            g.querySelector('.news-date').value = n.date;
-            g.querySelector('.news-tag').value = n.tag;
-            g.querySelector('.news-title').value = n.title;
-            g.querySelector('.news-url').value = n.url;
+            g.querySelector('.news-date').value = n.date || '';
+            g.querySelector('.news-tag').value = n.tag || '';
+            g.querySelector('.news-title').value = n.title || '';
+            g.querySelector('.news-url').value = n.url || '';
         });
     }
+
+    // Scrap settings Sync
+    const scrapSettings = appState.scrapSettings || { keyword: '재생의료', period: '' };
+    const kwInput = document.getElementById('scrap-keyword');
+    const pdInput = document.getElementById('scrap-period');
+    if(kwInput) kwInput.value = scrapSettings.keyword;
+    if(pdInput) pdInput.value = scrapSettings.period;
 
     const extraTextList = document.getElementById('adm-extra-text-list');
     if(extraTextList) {
@@ -311,123 +318,40 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => status.style.display='none', 3000);
     };
 
-    // Intersection Observer for reveal effects
+    // Interaction Observer for reveal effects
     const revealObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => { if(entry.isIntersecting) entry.target.classList.add('active'); });
     }, { threshold: 0.1 });
     document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-    // Scrap Now Logic (BioNews Engine: Google News RSS + XML Parser)
-    const scrapBtn = document.getElementById('btn-scrap-now');
-    if (scrapBtn) {
-        scrapBtn.onclick = async () => {
+    // Save Scrap Settings Logic
+    const saveScrapBtn = document.getElementById('btn-save-scrap-settings');
+    if (saveScrapBtn) {
+        saveScrapBtn.onclick = async () => {
             const status = document.getElementById('scrap-status');
-            const keyword = document.getElementById('scrap-keyword').value.trim() || "재생의료";
-            const periodVal = document.getElementById('scrap-period').value; // 구글 필터: 1d, 7d, 1m 등
+            const keyword = document.getElementById('scrap-keyword').value.trim() || '재생의료';
+            const period = document.getElementById('scrap-period').value;
             
-            status.innerText = `📡 구글 뉴스에서 '${keyword}' 검색 중...`;
+            appState.scrapSettings = { keyword, period };
+            
+            status.innerText = `🔄 수집 설정을 저장하는 중...`;
             status.style.display = 'block';
-            status.style.color = '#4338ca';
-            scrapBtn.disabled = true;
-
-            // Google News RSS URL Construction
-            let query = keyword;
-            if (periodVal) {
-                query += ` when:${periodVal}`;
-            }
-            const targetUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
-
-            const proxies = [
-                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                (url) => `https://api.codetabs.com/v1/proxy?url=${encodeURIComponent(url)}`
-            ];
-
-            let xmlText = "";
-            let success = false;
-
-            for (const getProxyUrl of proxies) {
-                try {
-                    const proxyUrl = getProxyUrl(targetUrl);
-                    const response = await fetch(proxyUrl, { cache: 'no-store' });
-                    if (response.ok) {
-                        xmlText = await response.text();
-                        if (xmlText && xmlText.includes('<item>')) {
-                            success = true;
-                            break;
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Proxy attempt failed, trying next...");
-                }
-            }
-
-            if (!success) {
-                status.innerText = '❌ 수집 실패 (네트워크/프록시 서버 오류)';
-                status.style.color = '#ef4444';
-                setTimeout(() => {
-                    status.style.display = 'none';
-                    scrapBtn.disabled = false;
-                }, 3000);
-                return;
-            }
+            status.style.color = '#10b981';
+            saveScrapBtn.disabled = true;
 
             try {
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-                const items = xmlDoc.querySelectorAll('item');
-                let addedCount = 0;
-                
-                const existingTitles = new Set((appState.news || []).map(n => n.title));
-
-                items.forEach((item, idx) => {
-                    // RSS는 상위 뉴스부터 나열됨
-                    if (idx >= 10) return; // 상위 10개만 수집
-
-                    const title = item.querySelector('title')?.textContent.trim() || "";
-                    const link = item.querySelector('link')?.textContent.trim() || "";
-                    const pubDate = item.querySelector('pubDate')?.textContent || "";
-                    
-                    if (title && link) {
-                        // 날짜 포맷 변환 (Mon, 07 Apr 2024 07:00:00 GMT -> 2024-04-07)
-                        let dateObj = new Date(pubDate);
-                        if (isNaN(dateObj.getTime())) dateObj = new Date();
-                        
-                        const yyyy = dateObj.getFullYear();
-                        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        const dd = String(dateObj.getDate()).padStart(2, '0');
-                        const dateFormatted = `${yyyy}-${mm}-${dd}`;
-
-                        if (!existingTitles.has(title)) {
-                            appState.news.unshift({
-                                date: dateFormatted,
-                                tag: 'NEWS',
-                                title: title,
-                                url: link
-                            });
-                            existingTitles.add(title);
-                            addedCount++;
-                        }
-                    }
-                });
-
-                if (addedCount > 0) {
-                    await db.ref('wfirm').set(appState);
-                    status.innerText = `✅ 완료: ${addedCount}개의 새 뉴스가 추가되었습니다!`;
-                    syncToAdmin(); 
-                    renderNews(1); 
-                } else {
-                    status.innerText = 'ℹ️ 추가할 새로운 소식이 없습니다.';
-                }
+                await db.ref('wfirm').set(appState);
+                status.innerText = `✅ 완료: "${keyword}" 검색 설정이 등록되었습니다. 매일 아침 9시(한국시간)에 서버가 자동으로 뉴스를 수집합니다.`;
             } catch (e) {
                 console.error(e);
-                status.innerText = '❌ 데이터 분석 중 오류 발생';
+                status.innerText = '❌ 설정 저장 중 오류가 발생했습니다.';
+                status.style.color = '#ef4444';
             }
 
             setTimeout(() => {
                 status.style.display = 'none';
-                scrapBtn.disabled = false;
-            }, 3000);
+                saveScrapBtn.disabled = false;
+            }, 5000);
         };
     }
 
