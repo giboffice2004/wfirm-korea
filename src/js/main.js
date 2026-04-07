@@ -317,5 +317,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: 0.1 });
     document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
+    // Scrap Now Logic
+    const scrapBtn = document.getElementById('btn-scrap-now');
+    if (scrapBtn) {
+        scrapBtn.onclick = async () => {
+            const status = document.getElementById('scrap-status');
+            status.innerText = '📡 최신 뉴스 수집 중...';
+            status.style.display = 'block';
+            scrapBtn.disabled = true;
+
+            try {
+                const query = "재생의료 " + (new Date().getFullYear());
+                const url = `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(query)}&sm=tab_opt&sort=1`;
+                const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+                
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents, "text/html");
+                
+                // 더 범용적인 선택자 사용 (li.bx 또는 .news_area)
+                const items = doc.querySelectorAll('li.bx, .news_area');
+                let addedCount = 0;
+                
+                const existingTitles = new Set((appState.news || []).map(n => n.title));
+
+                items.forEach(item => {
+                    const titleEl = item.querySelector('.news_tit, a.tit');
+                    const infoEl = item.querySelector('.info_group, .info');
+                    const dateEl = infoEl ? infoEl.querySelector('.info') : null;
+                    
+                    if (titleEl) {
+                        const title = titleEl.innerText.trim();
+                        const link = titleEl.href;
+                        let dateText = dateEl ? dateEl.innerText.trim() : new Date().toISOString().split('T')[0];
+                        
+                        // 날짜 정규화 (1일 전 -> YYYY-MM-DD 등은 생략하고 일단 텍스트 유지)
+                        if (dateText.includes('전') || dateText.includes(':')) {
+                            dateText = new Date().toISOString().split('T')[0];
+                        }
+                        dateText = dateText.replace(/\./g, '-');
+
+                        if (!existingTitles.has(title)) {
+                            appState.news.unshift({
+                                date: dateText,
+                                tag: 'NAVER',
+                                title: title,
+                                url: link
+                            });
+                            existingTitles.add(title);
+                            addedCount++;
+                        }
+                    }
+                });
+
+                if (addedCount > 0) {
+                    await db.ref('wfirm').set(appState);
+                    status.innerText = `✅ 성공: ${addedCount}개의 새 뉴스가 추가되었습니다!`;
+                    renderNews(1);
+                } else {
+                    status.innerText = 'ℹ️ 추가할 새로운 뉴스가 없습니다.';
+                }
+            } catch (e) {
+                console.error(e);
+                status.innerText = '❌ 수집 실패 (네트워크 오류)';
+            }
+
+            setTimeout(() => {
+                status.style.display = 'none';
+                scrapBtn.disabled = false;
+            }, 3000);
+        };
+    }
+
     loadData();
 });

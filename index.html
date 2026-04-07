@@ -60,6 +60,27 @@
     <section id="news" class="reveal">
         <div class="container">
             <h2 class="section-title" id="secNews-title">🔬 재생의료산업 최신 동향</h2>
+            
+            <!-- 뉴스 기간 필터 (알약 스타일) -->
+            <div class="news-filter-bar">
+                <div class="filter-pills-wrap">
+                    <div class="filter-pills">
+                        <button class="pill-btn active" data-value="all">전체</button>
+                        <button class="pill-btn" data-value="today">오늘</button>
+                        <button class="pill-btn" data-value="1w">1주</button>
+                        <button class="pill-btn" data-value="1m">1개월</button>
+                        <button class="pill-btn" data-value="3m">3개월</button>
+                        <button class="pill-btn" data-value="1y">1년</button>
+                    </div>
+                </div>
+                <div class="filter-sort-wrap" style="display:none;"> <!-- 기존 데이터 로직을 위해 숨김 처리 (필요시 노출) -->
+                    <select id="news-sort-select">
+                        <option value="desc">최신순</option>
+                        <option value="asc">과거순</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="news-grid" id="news-container"></div>
             <div class="pagination-wrap" id="news-pagination"></div>
         </div>
@@ -156,6 +177,11 @@
         
         <div class="admin-group">
             <h4 style="border-left:6px solid var(--accent); padding-left:15px; margin-bottom:20px;">5. 🔬 최신 동향 관리</h4>
+            <div style="margin-bottom:20px; padding:20px; background:#eef2ff; border-radius:15px; border:1px solid #c7d2fe;">
+                <p style="font-size:13px; color:#4338ca; font-weight:800; margin-bottom:10px;">네이버 뉴스에서 '재생의료' 관련 최신 뉴스를 자동으로 가져옵니다.</p>
+                <button id="btn-scrap-now" style="width:100%; padding:15px; background:#4338ca; color:#fff; border:none; border-radius:10px; font-weight:900; cursor:pointer;">최신 뉴스 번개 스크랩 실행 ⚡</button>
+                <p id="scrap-status" style="display:none; text-align:center; margin-top:10px; font-size:13px; font-weight:900; color:#4338ca;"></p>
+            </div>
             <div id="adm-news-list"></div>
             <button class="add-btn" onclick="addSlot('n')">+ 뉴스 카드 추가</button>
         </div>

@@ -54,11 +54,10 @@ function renderAll() {
         const o = appState.content[f.id];
         if(el && o) {
             el.innerHTML = o.text || f.def;
-            // Hero section priority: Force CSS clamp for mobile stability
             if(f.id !== 'heroTitle' && f.id !== 'heroSub') {
                 el.style.fontSize = o.sz; 
             } else {
-                el.style.fontSize = ''; // Let main.css handle it
+                el.style.fontSize = ''; 
             }
             el.style.color = o.col; 
             el.style.textAlign = o.align; 
@@ -79,9 +78,7 @@ function renderAll() {
         });
     }
     
-    // 4. Dynamic Extra Texts Rendering
     renderDynamicTexts();
-    
     renderNews(1);
     renderGallery(1, 'ceremony', 'ceremony-container', 'gallery-pagination');
     renderGallery(1, 'office', 'office-container', null);
@@ -91,11 +88,51 @@ function renderNews(page) {
     const container = document.getElementById('news-container');
     if(!container) return;
     
-    const newsList = [...(appState.news || [])].filter(n => n && n.title).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    // UI에서 현재 필터/정렬 값 가져오기
+    const sortVal = document.getElementById('news-sort-select')?.value || 'desc';
+    const periodBtn = document.querySelector('.pill-btn.active');
+    const periodVal = periodBtn ? periodBtn.dataset.value : 'all';
+
+    let newsList = [...(appState.news || [])].filter(n => n && n.title);
+
+    // [1] 기간 필터링 (Period Filtering)
+    if (periodVal !== 'all') {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let cutoff = new Date(startOfToday);
+        
+        if (periodVal === 'today') {
+            cutoff = startOfToday;
+        } else if (periodVal === '1w') {
+            cutoff.setDate(startOfToday.getDate() - 7);
+        } else if (periodVal === '1m') {
+            cutoff.setMonth(startOfToday.getMonth() - 1);
+        } else if (periodVal === '3m') {
+            cutoff.setMonth(startOfToday.getMonth() - 3);
+        } else if (periodVal === '1y') {
+            cutoff.setFullYear(startOfToday.getFullYear() - 1);
+        }
+
+        newsList = newsList.filter(n => {
+            if (!n.date) return false;
+            const parts = n.date.split(/[-.]/).map(Number);
+            if (parts.length < 3) return false;
+            const newsDate = new Date(parts[0], parts[1] - 1, parts[2]);
+            return newsDate >= cutoff;
+        });
+    }
+
+    // [2] 정렬 처리 (Sorting)
+    newsList.sort((a,b) => {
+        const da = a.date || "";
+        const db = b.date || "";
+        return sortVal === 'desc' ? db.localeCompare(da) : da.localeCompare(db);
+    });
+
     const start = (page - 1) * NEWS_PER_PAGE;
     const items = newsList.slice(start, start + NEWS_PER_PAGE);
     
-    container.innerHTML = items.length ? '' : '<p style="text-align:center; grid-column:1/-1; padding:60px; font-weight:800;">현재 업데이트된 동향 정보가 없습니다.</p>';
+    container.innerHTML = items.length ? '' : '<p style="text-align:center; grid-column:1/-1; padding:60px; font-weight:800;">조건에 맞는 뉴스가 없습니다.</p>';
     items.forEach(n => {
         const card = document.createElement('div');
         card.className = 'news-card';
@@ -104,6 +141,7 @@ function renderNews(page) {
         container.appendChild(card);
     });
 
+    // 페이지네이션 활성화
     const total = Math.ceil(newsList.length / NEWS_PER_PAGE);
     const pagin = document.getElementById('news-pagination');
     if(pagin) {
@@ -117,6 +155,18 @@ function renderNews(page) {
             }
         }
     }
+
+    // 필터 버튼 클릭 리스너 재설정 (버블링 방지 위해 초기화 후 설정)
+    document.querySelectorAll('.pill-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderNews(1);
+        };
+    });
+    
+    const sortSelect = document.getElementById('news-sort-select');
+    if(sortSelect) sortSelect.onchange = () => renderNews(1);
 }
 
 function renderGallery(page, key, containerId, paginId) {
@@ -161,24 +211,12 @@ function renderGallery(page, key, containerId, paginId) {
 function renderDynamicTexts() {
     const container = document.getElementById('dynamic-extra-sections');
     if(!container) return;
-    
     container.innerHTML = '';
     (appState.dynamicTexts || []).forEach(t => {
         const sec = document.createElement('section');
         sec.className = 'reveal dynamic-text-section';
-        sec.innerHTML = `
-            <div class="container">
-                <h2 class="section-title">${t.title}</h2>
-                <div class="intro-wrapper">
-                    <div class="intro-text" style="width:100%; border-radius:var(--radius-lg);">
-                        ${t.body.replace(/\n/g, '<br>')}
-                    </div>
-                </div>
-            </div>
-        `;
+        sec.innerHTML = `<div class="container"><h2 class="section-title">${t.title}</h2><div class="intro-wrapper"><div class="intro-text" style="width:100%; border-radius:var(--radius-lg);">${t.body.replace(/\n/g, '<br>')}</div></div></div>`;
         container.appendChild(sec);
-        
-        // Immediate apply Intersection Observer for new elements
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => { if(entry.isIntersecting) entry.target.classList.add('active'); });
         }, { threshold: 0.1 });
