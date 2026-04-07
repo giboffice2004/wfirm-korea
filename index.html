@@ -227,7 +227,11 @@
             <div id="adm-news-list" style="background:#f8fafc; padding:20px; border-radius:16px; border:1px solid #e2e8f0; margin-bottom:15px;">
                 <h5 style="font-size:14px; font-weight:800; color:#475569; margin-bottom:15px;">📰 수집된 개별 뉴스 데이터 목록 (직접 수정/삭제 가능)</h5>
             </div>
-            <button class="add-btn" onclick="addSlot('n')" style="margin-top:0;">+ 빈 뉴스 카드 수동 추가</button>
+            
+            <!-- 어드민 뉴스 페이지네이션 영역 -->
+            <div id="adm-news-pagination" style="display:flex; justify-content:center; gap:8px; margin-bottom:20px;"></div>
+
+            <button class="add-btn" onclick="window.addAdminNewsSlot()" style="margin-top:0;">+ 빈 뉴스 카드 수동 추가</button>
         </div>
 
         <div class="admin-group">
