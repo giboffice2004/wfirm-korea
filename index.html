@@ -175,28 +175,62 @@
             <button class="add-btn" onclick="addSlot('o')">+ 사진 슬롯 추가</button>
         </div>
         
-        <div class="admin-group">
-            <h4 style="border-left:6px solid var(--accent); padding-left:15px; margin-bottom:20px;">5. 🔬 최신 동향 관리</h4>
-            <div style="margin-bottom:20px; padding:25px; background:#eef2ff; border-radius:20px; border:1px solid #c7d2fe; box-shadow: 0 10px 30px rgba(67, 56, 202, 0.05);">
-                <p style="font-size:14px; color:#4338ca; font-weight:900; margin-bottom:15px;">📡 뉴스 자동 수집 설정 (매일 아침 9시 실행)</p>
-                <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:10px; margin-bottom:15px;">
-                    <input type="text" id="scrap-keyword" class="admin-input" placeholder="검색어 (예: 재생의료)" style="margin-bottom:0; font-weight:800;" value="재생의료">
-                    <select id="scrap-period" class="admin-input" style="margin-bottom:0; font-weight:800; padding:15px;">
-                        <option value="">전체 기간</option>
-                        <option value="1d">최근 1일</option>
-                        <option value="7d">최근 1주</option>
-                        <option value="1m">최근 1개월</option>
-                        <option value="3m">최근 3개월</option>
-                        <option value="6m">최근 6개월</option>
-                        <option value="1y">최근 1년</option>
-                    </select>
+        <div class="admin-group" style="background:transparent; padding:0; border:none;">
+            <h4 style="border-left:6px solid var(--accent); padding-left:15px; margin-bottom:25px;">5. 🔬 최신 동향 뉴스 리스트 관리</h4>
+            
+            <!-- (1) 자동 수집 설정 박스 -->
+            <div style="margin-bottom:20px; padding:30px; background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.03); border:1px solid #e2e8f0;">
+                <h5 style="font-size:16px; font-weight:800; color:#1e293b; margin-bottom:20px; display:flex; align-items:center;">
+                    <span style="font-size:20px; margin-right:8px;">⚙️</span> 자동 뉴스 수집 엔진 설정 (매일 아침 9시 구동)
+                </h5>
+                
+                <!-- 현재 설정 표시 영역 -->
+                <div style="margin-bottom:25px; padding:18px 20px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1; display:flex; align-items:center; justify-content:space-between;">
+                    <div>
+                        <span style="font-size:12px; color:#64748b; font-weight:700; display:block; margin-bottom:6px;">현재 서버에 등록된 수집 기준</span>
+                        <span id="current-scrap-settings" style="font-size:15px; color:#0f172a; font-weight:900;">데이터 로딩 중...</span>
+                    </div>
+                    <div style="background:#dcfce7; color:#166534; padding:6px 14px; border-radius:30px; font-size:12px; font-weight:800; border:1px solid #bbf7d0;">가동 준비 됨</div>
                 </div>
-                <button id="btn-save-scrap-settings" style="width:100%; padding:18px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; border:none; border-radius:15px; font-weight:900; cursor:pointer; font-size:16px; box-shadow: 0 15px 40px rgba(16, 185, 129, 0.3);">자동 수집 설정 저장하기 💾</button>
-                <p id="scrap-status" style="display:none; text-align:center; margin-top:15px; font-size:14px; font-weight:900; color:#10b981;"></p>
-                <p style="font-size:12px; color:#6b7280; font-weight:600; margin-top:10px; text-align:center;">* 브라우저 프록시 차단을 방지하기 위해 백엔드(서버)에서 자동 수집됩니다.</p>
+
+                <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:15px; margin-bottom:25px;">
+                    <div>
+                        <label style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px; display:block;">새로운 뉴스 검색 키워드</label>
+                        <input type="text" id="scrap-keyword" class="admin-input" placeholder="예: 재생의료" style="margin-bottom:0; background:#f1f5f9; border:none; padding:16px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02)">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px; display:block;">수집 허용 기간</label>
+                        <select id="scrap-period" class="admin-input" style="margin-bottom:0; padding:16px; background:#f1f5f9; border:none; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02)">
+                            <option value="">전체 기간</option>
+                            <option value="1d">최근 1일</option>
+                            <option value="7d">최근 1주</option>
+                            <option value="1m">최근 1개월</option>
+                            <option value="3m">최근 3개월</option>
+                            <option value="6m">최근 6개월</option>
+                            <option value="1y">최근 1년</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="btn-save-scrap-settings" style="width:100%; padding:18px; background:#10b981; color:#fff; border:none; border-radius:12px; font-weight:800; cursor:pointer; font-size:15px; transition:0.3s; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">엔진 설정 업데이트 및 저장</button>
             </div>
-            <div id="adm-news-list"></div>
-            <button class="add-btn" onclick="addSlot('n')">+ 뉴스 카드 추가</button>
+
+            <!-- (2) 수동 강제 수집 박스 -->
+            <div style="margin-bottom:30px; padding:30px; background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.03); border:1px solid #e2e8f0;">
+                <h5 style="font-size:16px; font-weight:800; color:#1e293b; margin-bottom:15px; display:flex; align-items:center;">
+                    <span style="font-size:20px; margin-right:8px;">⚡</span> 1회성 브라우저 강제 스크랩 (비상용)
+                </h5>
+                <div style="background:#fef2f2; color:#991b1b; padding:15px; border-radius:10px; font-size:13px; font-weight:600; margin-bottom:20px; line-height:1.5;">
+                    ※ 브라우저 보안 정책에 따라 <strong>프록시 네트워크 에러 가능성</strong>이 있습니다.<br>자동 수집 설정을 저장해 두셨다면 굳이 실행하지 않아도 서버가 알아서 찾아옵니다.
+                </div>
+                <button id="btn-scrap-now" style="width:100%; padding:18px; background:#fff; color:#0f172a; border:2px solid #e2e8f0; border-radius:12px; font-weight:800; cursor:pointer; font-size:15px; transition:0.3s;">위 설정 기준대로 지금 즉시 10개 긁어오기 시도</button>
+                
+                <p id="scrap-status" style="display:none; text-align:center; margin-top:20px; font-size:14px; font-weight:900; color:#4338ca; padding:20px; background:#eef2ff; border-radius:12px; line-height:1.6;"></p>
+            </div>
+
+            <div id="adm-news-list" style="background:#f8fafc; padding:20px; border-radius:16px; border:1px solid #e2e8f0; margin-bottom:15px;">
+                <h5 style="font-size:14px; font-weight:800; color:#475569; margin-bottom:15px;">📰 수집된 개별 뉴스 데이터 목록 (직접 수정/삭제 가능)</h5>
+            </div>
+            <button class="add-btn" onclick="addSlot('n')" style="margin-top:0;">+ 빈 뉴스 카드 수동 추가</button>
         </div>
 
         <div class="admin-group">

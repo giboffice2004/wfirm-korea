@@ -330,7 +330,7 @@ footer { background: var(--primary); color: rgba(255,255,255,0.6); text-align: c
 
 /* ── Sorting (Pill Style Dropdown) ── */
 .filter-sort-wrap {
-    margin-left: auto;
+    margin-left: 0;
 }
 #news-sort-select {
     appearance: none;
