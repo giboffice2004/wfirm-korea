@@ -317,57 +317,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: 0.1 });
     document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-    // Scrap Now Logic (Enhanced: Fail-safe Multiple Proxies & Parameter Sync)
+    // Scrap Now Logic (BioNews Engine: Google News RSS + XML Parser)
     const scrapBtn = document.getElementById('btn-scrap-now');
     if (scrapBtn) {
         scrapBtn.onclick = async () => {
             const status = document.getElementById('scrap-status');
             const keyword = document.getElementById('scrap-keyword').value.trim() || "재생의료";
-            const periodVal = document.getElementById('scrap-period').value; // pd 값
+            const periodVal = document.getElementById('scrap-period').value; // 구글 필터: 1d, 7d, 1m 등
             
-            status.innerText = `📡 '${keyword}' 관련 최신 뉴스 수집 중...`;
+            status.innerText = `📡 구글 뉴스에서 '${keyword}' 검색 중...`;
             status.style.display = 'block';
+            status.style.color = '#4338ca';
             scrapBtn.disabled = true;
 
-            // Naver News URL Construction
-            let targetUrl = `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(keyword)}&sm=tab_pge&sort=1`;
-            if (periodVal !== 'all') {
-                targetUrl += `&pd=${periodVal}`;
+            // Google News RSS URL Construction
+            let query = keyword;
+            if (periodVal) {
+                query += ` when:${periodVal}`;
             }
+            const targetUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
 
-            // Fail-safe Proxy List
             const proxies = [
                 (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
                 (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
                 (url) => `https://api.codetabs.com/v1/proxy?url=${encodeURIComponent(url)}`
             ];
 
-            let htmlText = "";
+            let xmlText = "";
             let success = false;
 
             for (const getProxyUrl of proxies) {
                 try {
                     const proxyUrl = getProxyUrl(targetUrl);
-                    console.log(`Trying proxy: ${proxyUrl}`);
                     const response = await fetch(proxyUrl, { cache: 'no-store' });
                     if (response.ok) {
-                        htmlText = await response.text();
-                        if (htmlText && htmlText.includes('news_tit')) {
+                        xmlText = await response.text();
+                        if (xmlText && xmlText.includes('<item>')) {
                             success = true;
                             break;
                         }
                     }
                 } catch (e) {
-                    console.warn("Proxy failed, trying next...");
+                    console.warn("Proxy attempt failed, trying next...");
                 }
             }
 
             if (!success) {
-                status.innerText = '❌ 수집 실패 (모든 프록시 서버 응답 없음)';
+                status.innerText = '❌ 수집 실패 (네트워크/프록시 서버 오류)';
                 status.style.color = '#ef4444';
                 setTimeout(() => {
                     status.style.display = 'none';
-                    status.style.color = '#4338ca';
                     scrapBtn.disabled = false;
                 }, 3000);
                 return;
@@ -375,32 +374,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlText, "text/html");
-                const items = doc.querySelectorAll('li.bx, .news_area');
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                const items = xmlDoc.querySelectorAll('item');
                 let addedCount = 0;
                 
                 const existingTitles = new Set((appState.news || []).map(n => n.title));
 
-                items.forEach(item => {
-                    const titleEl = item.querySelector('.news_tit, a.tit');
-                    const infoEl = item.querySelector('.info_group, .info, .press');
-                    const dateEl = item.querySelector('.info_group .info:last-child, .info, .date');
+                items.forEach((item, idx) => {
+                    // RSS는 상위 뉴스부터 나열됨
+                    if (idx >= 10) return; // 상위 10개만 수집
+
+                    const title = item.querySelector('title')?.textContent.trim() || "";
+                    const link = item.querySelector('link')?.textContent.trim() || "";
+                    const pubDate = item.querySelector('pubDate')?.textContent || "";
                     
-                    if (titleEl) {
-                        const title = titleEl.innerText.trim();
-                        const link = titleEl.href;
-                        let dateText = dateEl ? dateEl.innerText.trim().replace('언론사 선정', '') : new Date().toISOString().split('T')[0];
+                    if (title && link) {
+                        // 날짜 포맷 변환 (Mon, 07 Apr 2024 07:00:00 GMT -> 2024-04-07)
+                        let dateObj = new Date(pubDate);
+                        if (isNaN(dateObj.getTime())) dateObj = new Date();
                         
-                        // 날짜 정규화
-                        if (dateText.includes('전') || dateText.includes(':')) {
-                            dateText = new Date().toISOString().split('T')[0];
-                        }
-                        dateText = dateText.replace(/\./g, '-');
+                        const yyyy = dateObj.getFullYear();
+                        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        const dd = String(dateObj.getDate()).padStart(2, '0');
+                        const dateFormatted = `${yyyy}-${mm}-${dd}`;
 
                         if (!existingTitles.has(title)) {
                             appState.news.unshift({
-                                date: dateText,
-                                tag: 'NAVER',
+                                date: dateFormatted,
+                                tag: 'NEWS',
                                 title: title,
                                 url: link
                             });
@@ -412,15 +413,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (addedCount > 0) {
                     await db.ref('wfirm').set(appState);
-                    status.innerText = `✅ 성공: ${addedCount}개의 새 뉴스가 추가되었습니다!`;
-                    syncToAdmin(); // 관리자 UI 동기화
-                    renderNews(1); // 대시보드 갱신
+                    status.innerText = `✅ 완료: ${addedCount}개의 새 뉴스가 추가되었습니다!`;
+                    syncToAdmin(); 
+                    renderNews(1); 
                 } else {
-                    status.innerText = 'ℹ️ 추가할 새로운 뉴스가 없습니다.';
+                    status.innerText = 'ℹ️ 추가할 새로운 소식이 없습니다.';
                 }
             } catch (e) {
                 console.error(e);
-                status.innerText = '❌ 파싱 중 오류 발생';
+                status.innerText = '❌ 데이터 분석 중 오류 발생';
             }
 
             setTimeout(() => {
