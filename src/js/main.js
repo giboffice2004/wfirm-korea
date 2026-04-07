@@ -123,6 +123,7 @@ window.addSlot = function(type) {
     
     let content = '';
     if(type==='n') {
+        div.classList.add('admin-slot-n'); // 페이지네이션을 위한 클래스 추가
         content = `<div style="display:flex; gap:10px;"><input type="text" class="admin-input news-date" placeholder="2000-00-00"><input type="text" class="admin-input news-tag" placeholder="출처/분류"></div><input type="text" class="admin-input news-title" placeholder="뉴스 제목"><input type="text" class="admin-input news-url" placeholder="원본 링크 URL">`;
     } else if(type==='v') {
         content = `<input type="text" class="admin-input yt-id-val" placeholder="유튜브 비디오 ID (예: VHE52iEaPJ4)">`;
@@ -219,6 +220,9 @@ function syncToAdmin() {
             g.querySelector('.news-title').value = n.title || '';
             g.querySelector('.news-url').value = n.url || '';
         });
+        
+        // 항목 초기화 후 1페이지 렌더링
+        window.renderAdminNewsPage(1);
     }
 
     // Scrap settings Sync
@@ -250,6 +254,84 @@ function syncToAdmin() {
         });
     }
 }
+
+// Admin News Pagination Logic
+window.adminNewsCurrentPage = 1;
+window.renderAdminNewsPage = function(page) {
+    const listItems = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n'));
+    const pagination = document.getElementById('adm-news-pagination');
+    if (!pagination) return;
+
+    const itemsPerPage = 10;
+    const totalItems = listItems.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+    window.adminNewsCurrentPage = page;
+
+    // Show/Hide Items
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+
+    listItems.forEach((item, index) => {
+        if (index >= startIndex && index < endIndex) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    // Render Pagination Buttons
+    pagination.innerHTML = '';
+    
+    // Previous Group Button (<)
+    const currentGroup = Math.ceil(page / 5);
+    const startPage = (currentGroup - 1) * 5 + 1;
+    let endPage = startPage + 4;
+    if (endPage > totalPages) endPage = totalPages;
+
+    if (startPage > 1) {
+        const prevBtn = document.createElement('button');
+        prevBtn.innerText = '‹';
+        prevBtn.className = 'page-btn';
+        prevBtn.onclick = () => {
+            window.renderAdminNewsPage(startPage - 1);
+            prevBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
+        };
+        pagination.appendChild(prevBtn);
+    }
+
+    // Number Buttons
+    for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement('button');
+        btn.innerText = i;
+        btn.className = `page-btn ${i === page ? 'active' : ''}`;
+        btn.onclick = () => {
+            window.renderAdminNewsPage(i);
+            btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+        };
+        pagination.appendChild(btn);
+    }
+
+    // Next Group Button (>)
+    if (endPage < totalPages) {
+        const nextBtn = document.createElement('button');
+        nextBtn.innerText = '›';
+        nextBtn.className = 'page-btn';
+        nextBtn.onclick = () => {
+            window.renderAdminNewsPage(endPage + 1);
+            nextBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
+        };
+        pagination.appendChild(nextBtn);
+    }
+};
+
+window.addAdminNewsSlot = function() {
+    window.addSlot('n');
+    window.renderAdminNewsPage(1); // 새로 추가 후 1페이지로 이동시켜 보여줌
+};
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // Admin Subtle Trigger & Login Close logic
