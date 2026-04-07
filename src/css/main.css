@@ -368,3 +368,32 @@ footer { background: var(--primary); color: rgba(255,255,255,0.6); text-align: c
     font-size: 44px;
     cursor: pointer;
 }
+
+/* ── Pagination Buttons ── */
+.page-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 4px;
+}
+.page-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+.page-btn.active {
+    background: var(--primary);
+    color: var(--accent);
+    border-color: var(--primary);
+    box-shadow: 0 8px 20px rgba(10, 25, 47, 0.2);
+}
