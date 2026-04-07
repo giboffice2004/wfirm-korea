@@ -205,7 +205,12 @@ function syncToAdmin() {
 
     const newsList = document.getElementById('adm-news-list');
     if(newsList) {
-        newsList.innerHTML = '';
+        newsList.innerHTML = '<h5 style="font-size:14px; font-weight:800; color:#475569; margin-bottom:15px;">📰 수집된 개별 뉴스 데이터 목록 (직접 수정/삭제 가능)</h5>';
+        
+        if (appState.news) {
+            appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
         (appState.news || []).forEach(n => {
             window.addSlot('n');
             const g = newsList.lastChild;
@@ -419,11 +424,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         tempDiv.innerHTML = title;
                         const decodedTitle = tempDiv.textContent || tempDiv.innerText || "";
 
+                        // 출처(언론사) 추출 로직 (' - 언론사명' 형태 파싱)
+                        let publisher = "Google News";
+                        let finalTitle = decodedTitle;
+                        const lastDashIdx = decodedTitle.lastIndexOf(' - ');
+                        if (lastDashIdx !== -1) {
+                            publisher = decodedTitle.substring(lastDashIdx + 3).trim();
+                            // 구글뉴스는 보통 뒤에 언론사를 붙이므로 잘라내줍니다.
+                            finalTitle = decodedTitle.substring(0, lastDashIdx).trim(); 
+                        }
+
                         if (!existingTitles.has(decodedTitle)) {
                             appState.news.unshift({
                                 date: dateFormatted,
-                                tag: 'NEWS',
-                                title: decodedTitle,
+                                tag: publisher,
+                                title: finalTitle,
                                 url: link
                             });
                             existingTitles.add(decodedTitle);
@@ -433,6 +448,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (addedCount > 0) {
+                    // 수집 후 날짜순 정렬 보장
+                    appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
                     await db.ref('wfirm').set(appState);
                     status.innerText = `✅ 완료: ${addedCount}개의 새 뉴스가 즉각 추가되었습니다!`;
                     syncToAdmin(); 

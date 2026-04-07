@@ -62,6 +62,7 @@ async function scrapeNews() {
         
         if (title && link) {
             let dateObj = new Date(pubDate);
+            if (isNaN(dateObj.getTime())) dateObj = new Date(pubDate.replace(/-/g, '/')); // Fallback for some proxies
             if (isNaN(dateObj.getTime())) dateObj = new Date();
             
             const yyyy = dateObj.getFullYear();
@@ -69,23 +70,35 @@ async function scrapeNews() {
             const dd = String(dateObj.getDate()).padStart(2, '0');
             const dateFormatted = `${yyyy}-${mm}-${dd}`;
 
-            if (!existingTitles.has(title)) {
+            let publisher = "Google News";
+            let finalTitle = title;
+            const lastDashIdx = title.lastIndexOf(' - ');
+            if (lastDashIdx !== -1) {
+                publisher = title.substring(lastDashIdx + 3).trim();
+                finalTitle = title.substring(0, lastDashIdx).trim(); 
+            }
+
+            if (!existingTitles.has(finalTitle)) {
                 appState.news.unshift({
                     date: dateFormatted,
-                    tag: 'NEWS',
-                    title: title,
+                    tag: publisher,
+                    title: finalTitle,
                     url: link
                 });
-                existingTitles.add(title);
+                existingTitles.add(finalTitle);
                 addedCount++;
             }
         }
     }
     
     if (addedCount > 0) {
+        // Sort entire array by Date Descending before saving back to DB
+        appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
+
         await ref.set(appState);
         console.log(`✅ 수집 완료: +${addedCount}개 신규 뉴스 메인페이지 등록됨.`);
     } else {
+
         console.log(`ℹ️ 수집 완료: 새롭게 등록할 뉴스가 없습니다.`);
     }
     
