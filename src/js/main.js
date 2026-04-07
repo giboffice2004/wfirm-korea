@@ -317,30 +317,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: 0.1 });
     document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-    // Scrap Now Logic
+    // Scrap Now Logic (Enhanced: Fail-safe Multiple Proxies & Parameter Sync)
     const scrapBtn = document.getElementById('btn-scrap-now');
     if (scrapBtn) {
         scrapBtn.onclick = async () => {
             const status = document.getElementById('scrap-status');
-            status.innerText = '📡 최신 뉴스 수집 중...';
+            const keyword = document.getElementById('scrap-keyword').value.trim() || "재생의료";
+            const periodVal = document.getElementById('scrap-period').value; // pd 값
+            
+            status.innerText = `📡 '${keyword}' 관련 최신 뉴스 수집 중...`;
             status.style.display = 'block';
             scrapBtn.disabled = true;
 
+            // Naver News URL Construction
+            let targetUrl = `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(keyword)}&sm=tab_pge&sort=1`;
+            if (periodVal !== 'all') {
+                targetUrl += `&pd=${periodVal}`;
+            }
+
+            // Fail-safe Proxy List
+            const proxies = [
+                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                (url) => `https://api.codetabs.com/v1/proxy?url=${encodeURIComponent(url)}`
+            ];
+
+            let htmlText = "";
+            let success = false;
+
+            for (const getProxyUrl of proxies) {
+                try {
+                    const proxyUrl = getProxyUrl(targetUrl);
+                    console.log(`Trying proxy: ${proxyUrl}`);
+                    const response = await fetch(proxyUrl, { cache: 'no-store' });
+                    if (response.ok) {
+                        htmlText = await response.text();
+                        if (htmlText && htmlText.includes('news_tit')) {
+                            success = true;
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Proxy failed, trying next...");
+                }
+            }
+
+            if (!success) {
+                status.innerText = '❌ 수집 실패 (모든 프록시 서버 응답 없음)';
+                status.style.color = '#ef4444';
+                setTimeout(() => {
+                    status.style.display = 'none';
+                    status.style.color = '#4338ca';
+                    scrapBtn.disabled = false;
+                }, 3000);
+                return;
+            }
+
             try {
-                const query = "재생의료 " + (new Date().getFullYear());
-                const targetUrl = `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(query)}&sm=tab_opt&sort=1`;
-                
-                // 더 안정적인 프록시 서버 시도 (corsproxy.io)
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-                
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Network error');
-                
-                const htmlText = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlText, "text/html");
-                
-                // 더 범용적인 선택자 사용 (li.bx 또는 .news_area)
                 const items = doc.querySelectorAll('li.bx, .news_area');
                 let addedCount = 0;
                 
@@ -348,15 +383,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 items.forEach(item => {
                     const titleEl = item.querySelector('.news_tit, a.tit');
-                    const infoEl = item.querySelector('.info_group, .info');
-                    const dateEl = infoEl ? infoEl.querySelector('.info') : null;
+                    const infoEl = item.querySelector('.info_group, .info, .press');
+                    const dateEl = item.querySelector('.info_group .info:last-child, .info, .date');
                     
                     if (titleEl) {
                         const title = titleEl.innerText.trim();
                         const link = titleEl.href;
-                        let dateText = dateEl ? dateEl.innerText.trim() : new Date().toISOString().split('T')[0];
+                        let dateText = dateEl ? dateEl.innerText.trim().replace('언론사 선정', '') : new Date().toISOString().split('T')[0];
                         
-                        // 날짜 정규화 (1일 전 -> YYYY-MM-DD 등은 생략하고 일단 텍스트 유지)
+                        // 날짜 정규화
                         if (dateText.includes('전') || dateText.includes(':')) {
                             dateText = new Date().toISOString().split('T')[0];
                         }
@@ -378,13 +413,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (addedCount > 0) {
                     await db.ref('wfirm').set(appState);
                     status.innerText = `✅ 성공: ${addedCount}개의 새 뉴스가 추가되었습니다!`;
-                    renderNews(1);
+                    syncToAdmin(); // 관리자 UI 동기화
+                    renderNews(1); // 대시보드 갱신
                 } else {
                     status.innerText = 'ℹ️ 추가할 새로운 뉴스가 없습니다.';
                 }
             } catch (e) {
                 console.error(e);
-                status.innerText = '❌ 수집 실패 (네트워크 오류)';
+                status.innerText = '❌ 파싱 중 오류 발생';
             }
 
             setTimeout(() => {

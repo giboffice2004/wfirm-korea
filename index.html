@@ -177,10 +177,22 @@
         
         <div class="admin-group">
             <h4 style="border-left:6px solid var(--accent); padding-left:15px; margin-bottom:20px;">5. 🔬 최신 동향 관리</h4>
-            <div style="margin-bottom:20px; padding:20px; background:#eef2ff; border-radius:15px; border:1px solid #c7d2fe;">
-                <p style="font-size:13px; color:#4338ca; font-weight:800; margin-bottom:10px;">네이버 뉴스에서 '재생의료' 관련 최신 뉴스를 자동으로 가져옵니다.</p>
-                <button id="btn-scrap-now" style="width:100%; padding:15px; background:#4338ca; color:#fff; border:none; border-radius:10px; font-weight:900; cursor:pointer;">최신 뉴스 번개 스크랩 실행 ⚡</button>
-                <p id="scrap-status" style="display:none; text-align:center; margin-top:10px; font-size:13px; font-weight:900; color:#4338ca;"></p>
+            <div style="margin-bottom:20px; padding:25px; background:#eef2ff; border-radius:20px; border:1px solid #c7d2fe; box-shadow: 0 10px 30px rgba(67, 56, 202, 0.05);">
+                <p style="font-size:14px; color:#4338ca; font-weight:900; margin-bottom:15px;">📡 뉴스 수집 설정 (네이버 뉴스 기반)</p>
+                <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:10px; margin-bottom:15px;">
+                    <input type="text" id="scrap-keyword" class="admin-input" placeholder="검색어 (예: 재생의료)" style="margin-bottom:0; font-weight:800;" value="재생의료">
+                    <select id="scrap-period" class="admin-input" style="margin-bottom:0; font-weight:800; padding:15px;">
+                        <option value="all">전체 기간</option>
+                        <option value="4">최근 1일</option>
+                        <option value="2">최근 1주</option>
+                        <option value="1">최근 1개월</option>
+                        <option value="7">최근 3개월</option>
+                        <option value="8">최근 6개월</option>
+                        <option value="9">최근 1년</option>
+                    </select>
+                </div>
+                <button id="btn-scrap-now" style="width:100%; padding:18px; background:linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color:#fff; border:none; border-radius:15px; font-weight:900; cursor:pointer; font-size:16px; box-shadow: 0 15px 40px rgba(67, 56, 202, 0.3);">최신 뉴스 번개 스크랩 실행 ⚡</button>
+                <p id="scrap-status" style="display:none; text-align:center; margin-top:15px; font-size:14px; font-weight:900; color:#4338ca;"></p>
             </div>
             <div id="adm-news-list"></div>
             <button class="add-btn" onclick="addSlot('n')">+ 뉴스 카드 추가</button>
