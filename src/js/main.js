@@ -206,7 +206,15 @@ function syncToAdmin() {
 
     const newsList = document.getElementById('adm-news-list');
     if(newsList) {
-        newsList.innerHTML = '<h5 style="font-size:14px; font-weight:800; color:#475569; margin-bottom:15px;">📰 수집된 개별 뉴스 데이터 목록 (직접 수정/삭제 가능)</h5>';
+        newsList.innerHTML = `
+            <h5 style="font-size:14px; font-weight:800; color:#475569; margin-bottom:15px;">📰 수집된 개별 뉴스 데이터 목록 (직접 수정/삭제 가능)</h5>
+            <!-- 관리자 패널 전용 프리미엄 검색창 -->
+            <div class="admin-search-container" style="margin-bottom:15px;">
+                <div class="search-box" style="display:flex; align-items:center; background:#fff; padding:10px 15px; border-radius:10px; border:1px solid #cbd5e1;">
+                    <i class="fa-solid fa-magnifying-glass" style="color:#94a3b8; margin-right:10px;"></i>
+                    <input type="text" id="admin-news-search" placeholder="관리 목록에서 기사 제목 또는 출처 검색..." style="border:none; outline:none; width:100%;" oninput="window.renderAdminNewsPage(1)">
+                </div>
+            </div>`;
         
         if (appState.news) {
             appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -284,21 +292,32 @@ window.renderAdminNewsPage = function(page) {
 
     // [2] 중복 감지 및 강조 표시 (전체 데이터 기준)
     const allItems = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n'));
-    const seenTitles = new Set();
-    const seenUrls = new Set();
+    const seenTitles = new Map(); // 타이틀과 해당 아이템 매핑
+    const seenUrls = new Map();   // URL과 해당 아이템 매핑
     
-    // 날짜순 정렬이 보장된 상태이므로 처음 나온 것을 원본으로 간주
     allItems.forEach(item => {
         const title = item.querySelector('.news-title').value.trim().toLowerCase();
         const url = item.querySelector('.news-url').value.trim().toLowerCase();
         
         item.classList.remove('duplicate-card');
+        // 기존 사유 배지 제거
+        const oldBadge = item.querySelector('.duplicate-reason-badge');
+        if (oldBadge) oldBadge.remove();
+
         if (title && url) {
-            if (seenTitles.has(title) || seenUrls.has(url)) {
+            let reason = "";
+            if (seenTitles.has(title)) reason = "제목 중복";
+            if (seenUrls.has(url)) reason = reason ? "제목/URL 중복" : "URL 중복";
+
+            if (reason) {
                 item.classList.add('duplicate-card');
+                const badge = document.createElement('div');
+                badge.className = 'duplicate-reason-badge';
+                badge.innerText = `⚠️ ${reason}`;
+                item.appendChild(badge);
             } else {
-                seenTitles.add(title);
-                seenUrls.add(url);
+                seenTitles.set(title, item);
+                seenUrls.set(url, item);
             }
         }
     });
