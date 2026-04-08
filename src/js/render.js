@@ -142,7 +142,23 @@ function renderNews(page) {
     });
 
     const start = (page - 1) * NEWS_PER_PAGE;
-    const items = newsList.slice(start, start + NEWS_PER_PAGE);
+    
+    // [중복 제거 공정] 제목 또는 URL이 겹치는 기사는 1개만 남김 (Safety Net)
+    const uniqueNews = [];
+    const seenTitles = new Set();
+    const seenUrls = new Set();
+    
+    newsList.forEach(n => {
+        const titleKey = n.title.trim().toLowerCase();
+        const urlKey = n.url.trim().toLowerCase();
+        if (!seenTitles.has(titleKey) && !seenUrls.has(urlKey)) {
+            uniqueNews.push(n);
+            seenTitles.add(titleKey);
+            seenUrls.add(urlKey);
+        }
+    });
+
+    const items = uniqueNews.slice(start, start + NEWS_PER_PAGE);
     
     container.innerHTML = items.length ? '' : '<p style="text-align:center; grid-column:1/-1; padding:60px; font-weight:800;">조건에 맞는 뉴스가 없습니다.</p>';
     items.forEach(n => {
@@ -153,8 +169,8 @@ function renderNews(page) {
         container.appendChild(card);
     });
 
-    // 페이지네이션 활성화
-    const total = Math.ceil(newsList.length / NEWS_PER_PAGE);
+    // 페이지네이션 활성화 (중복 제거된 리스트 기준)
+    const total = Math.ceil(uniqueNews.length / NEWS_PER_PAGE);
     const pagin = document.getElementById('news-pagination');
     if(pagin) {
         pagin.innerHTML = '';

@@ -258,11 +258,51 @@ function syncToAdmin() {
 // Admin News Pagination Logic
 window.adminNewsCurrentPage = 1;
 window.renderAdminNewsPage = function(page) {
-    const listItems = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n'));
+    const itemsPerPage = 10;
     const pagination = document.getElementById('adm-news-pagination');
     if (!pagination) return;
 
-    const itemsPerPage = 10;
+    const searchTerm = document.getElementById('admin-news-search')?.value.toLowerCase().trim() || "";
+    let listItems = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n'));
+
+    // [1] 관리자 검색 필터링
+    if (searchTerm) {
+        listItems.forEach(item => {
+            const title = item.querySelector('.news-title').value.toLowerCase();
+            const tag = item.querySelector('.news-tag').value.toLowerCase();
+            if (title.includes(searchTerm) || tag.includes(searchTerm)) {
+                item.dataset.filterMatch = "true";
+            } else {
+                item.dataset.filterMatch = "false";
+                item.style.display = 'none';
+            }
+        });
+        listItems = listItems.filter(item => item.dataset.filterMatch === "true");
+    } else {
+        listItems.forEach(item => item.dataset.filterMatch = "true");
+    }
+
+    // [2] 중복 감지 및 강조 표시 (전체 데이터 기준)
+    const allItems = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n'));
+    const seenTitles = new Set();
+    const seenUrls = new Set();
+    
+    // 날짜순 정렬이 보장된 상태이므로 처음 나온 것을 원본으로 간주
+    allItems.forEach(item => {
+        const title = item.querySelector('.news-title').value.trim().toLowerCase();
+        const url = item.querySelector('.news-url').value.trim().toLowerCase();
+        
+        item.classList.remove('duplicate-card');
+        if (title && url) {
+            if (seenTitles.has(title) || seenUrls.has(url)) {
+                item.classList.add('duplicate-card');
+            } else {
+                seenTitles.add(title);
+                seenUrls.add(url);
+            }
+        }
+    });
+
     const totalItems = listItems.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
@@ -342,11 +382,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gearBtn) gearBtn.onclick = () => loginOverlay.style.display='flex';
     if (loginClose) loginClose.onclick = () => loginOverlay.style.display='none';
     
-    // 뉴스 검색 입력 실시간 연동
+    // 뉴스 검색 입력 실시간 연동 (사용자 페이지)
     const newsSearchInput = document.getElementById('news-search-input');
     if (newsSearchInput) {
         newsSearchInput.oninput = () => {
-            renderNews(1); // 검색어 입력 시 1페이지부터 다시 렌더링
+            renderNews(1);
+        };
+    }
+
+    // 관리자 패널용 뉴스 검색 실시간 연동
+    const adminNewsSearch = document.getElementById('admin-news-search');
+    if (adminNewsSearch) {
+        adminNewsSearch.oninput = () => {
+            window.renderAdminNewsPage(1);
         };
     }
     if (loginOverlay) {

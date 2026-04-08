@@ -60,23 +60,24 @@ async function scrapeNews() {
     console.log(`📑 후보 뉴스 ${feed.items.length}개 발견. 중복 검사 및 정제 시작...`);
 
     let addedCount = 0;
-    // 기존 뉴스들의 제목과 URL을 집합으로 만들어 빠른 중복 체크 준비
-    const existingTitles = new Set(appState.news.map(n => n.title.trim()));
-    const existingUrls = new Set(appState.news.map(n => n.url.trim()));
+    // 기존 뉴스들의 제목과 URL을 집합으로 만들어 빠른 중복 체크 준비 (정규화 적용)
+    const existingTitles = new Set(appState.news.map(n => n.title.trim().toLowerCase()));
+    const existingUrls = new Set(appState.news.map(n => (n.url || "").trim().toLowerCase()));
     
-    for (const item of feed.items.slice(0, 15)) { // 상위 15개 검사하도록 약간 확장
+    for (const item of feed.items.slice(0, 15)) { 
         const rawTitle = item.title;
-        const link = item.link;
+        const link = (item.link || "").trim().toLowerCase();
         const pubDate = item.pubDate;
         
         if (rawTitle && link) {
-            // HTML Entity Decoding (간단한 구현)
+            // HTML Entity Decoding
             const decodedTitle = rawTitle
                 .replace(/&quot;/g, '"')
                 .replace(/&amp;/g, '&')
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>')
-                .replace(/&#39;/g, "'");
+                .replace(/&#39;/g, "'")
+                .trim();
 
             let dateObj = new Date(pubDate);
             if (isNaN(dateObj.getTime())) dateObj = new Date(pubDate.replace(/-/g, '/')); 
@@ -95,22 +96,22 @@ async function scrapeNews() {
                 finalTitle = decodedTitle.substring(0, lastDashIdx).trim(); 
             }
 
-            // [핵심] 제목 또는 URL 중 하나라도 일치하면 중복으로 간주
-            const isDuplicate = existingTitles.has(finalTitle.trim()) || existingUrls.has(link.trim());
+            const finalTitleKey = finalTitle.trim().toLowerCase();
+
+            // [핵심] 제목 또는 URL 중 하나라도 일치하면 중복으로 간주 (정규화된 키 기준)
+            const isDuplicate = existingTitles.has(finalTitleKey) || existingUrls.has(link);
 
             if (!isDuplicate) {
                 appState.news.unshift({
                     date: dateFormatted,
                     tag: publisher,
                     title: finalTitle,
-                    url: link
+                    url: item.link // 원본 링크 저장
                 });
-                existingTitles.add(finalTitle.trim());
-                existingUrls.add(link.trim());
+                existingTitles.add(finalTitleKey);
+                existingUrls.add(link);
                 addedCount++;
                 console.log(`  [NEW] ${finalTitle} (${publisher})`);
-            } else {
-                // console.log(`  [SKIP] 중복 기사: ${finalTitle}`);
             }
         }
     }

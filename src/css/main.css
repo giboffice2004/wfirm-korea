@@ -449,6 +449,24 @@ footer { background: var(--primary); color: rgba(255,255,255,0.6); text-align: c
 .page-btn.active {
     background: var(--primary);
     color: var(--accent);
-    border-color: var(--primary);
     box-shadow: 0 8px 20px rgba(10, 25, 47, 0.2);
+}
+
+/* ── Admin News Management ── */
+.duplicate-card {
+    background: #fff5f5 !important;
+    border: 2px solid #feb2b2 !important;
+    position: relative;
+}
+.duplicate-card::after {
+    content: '⚠️ 중복 감지';
+    position: absolute;
+    top: 10px;
+    left: 20px;
+    background: #e53e3e;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
 }
