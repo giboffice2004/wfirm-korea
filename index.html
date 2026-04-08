@@ -61,7 +61,7 @@
         <div class="container">
             <h2 class="section-title" id="secNews-title">🔬 재생의료산업 최신 동향</h2>
             
-            <!-- 뉴스 기간 필터 (알약 스타일) -->
+            <!-- 뉴스 기간 필터 및 검색 바 -->
             <div class="news-filter-bar">
                 <div class="filter-pills-wrap">
                     <div class="filter-pills">
@@ -73,6 +73,15 @@
                         <button class="pill-btn" data-value="1y">1년</button>
                     </div>
                 </div>
+
+                <!-- 뉴스 검색창 추가 -->
+                <div class="news-search-wrap">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="news-search-input" placeholder="뉴스 제목 또는 출처 검색...">
+                    </div>
+                </div>
+
                 <div class="filter-sort-wrap">
                     <select id="news-sort-select">
                         <option value="desc">최신 날짜순</option>

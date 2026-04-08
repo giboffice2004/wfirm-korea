@@ -48,21 +48,38 @@ async function scrapeNews() {
     }
     
     const searchUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
-    console.log(`🔍 검색 URL: ${searchUrl}`);
+    console.log(`🔍 Google News RSS 요청: ${searchUrl}`);
       
     const feed = await parser.parseURL(searchUrl);
+    
+    if (!feed.items || feed.items.length === 0) {
+        console.log('ℹ️ 검색 결과가 없습니다.');
+        process.exit(0);
+    }
+
+    console.log(`📑 후보 뉴스 ${feed.items.length}개 발견. 중복 검사 및 정제 시작...`);
+
     let addedCount = 0;
+    // 기존 뉴스들의 제목과 URL을 집합으로 만들어 빠른 중복 체크 준비
+    const existingTitles = new Set(appState.news.map(n => n.title.trim()));
+    const existingUrls = new Set(appState.news.map(n => n.url.trim()));
     
-    const existingTitles = new Set(appState.news.map(n => n.title));
-    
-    for (const item of feed.items.slice(0, 10)) { // 상위 10개 검사
-        const title = item.title;
+    for (const item of feed.items.slice(0, 15)) { // 상위 15개 검사하도록 약간 확장
+        const rawTitle = item.title;
         const link = item.link;
         const pubDate = item.pubDate;
         
-        if (title && link) {
+        if (rawTitle && link) {
+            // HTML Entity Decoding (간단한 구현)
+            const decodedTitle = rawTitle
+                .replace(/&quot;/g, '"')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&#39;/g, "'");
+
             let dateObj = new Date(pubDate);
-            if (isNaN(dateObj.getTime())) dateObj = new Date(pubDate.replace(/-/g, '/')); // Fallback for some proxies
+            if (isNaN(dateObj.getTime())) dateObj = new Date(pubDate.replace(/-/g, '/')); 
             if (isNaN(dateObj.getTime())) dateObj = new Date();
             
             const yyyy = dateObj.getFullYear();
@@ -71,38 +88,44 @@ async function scrapeNews() {
             const dateFormatted = `${yyyy}-${mm}-${dd}`;
 
             let publisher = "Google News";
-            let finalTitle = title;
-            const lastDashIdx = title.lastIndexOf(' - ');
+            let finalTitle = decodedTitle;
+            const lastDashIdx = decodedTitle.lastIndexOf(' - ');
             if (lastDashIdx !== -1) {
-                publisher = title.substring(lastDashIdx + 3).trim();
-                finalTitle = title.substring(0, lastDashIdx).trim(); 
+                publisher = decodedTitle.substring(lastDashIdx + 3).trim();
+                finalTitle = decodedTitle.substring(0, lastDashIdx).trim(); 
             }
 
-            if (!existingTitles.has(finalTitle)) {
+            // [핵심] 제목 또는 URL 중 하나라도 일치하면 중복으로 간주
+            const isDuplicate = existingTitles.has(finalTitle.trim()) || existingUrls.has(link.trim());
+
+            if (!isDuplicate) {
                 appState.news.unshift({
                     date: dateFormatted,
                     tag: publisher,
                     title: finalTitle,
                     url: link
                 });
-                existingTitles.add(finalTitle);
+                existingTitles.add(finalTitle.trim());
+                existingUrls.add(link.trim());
                 addedCount++;
+                console.log(`  [NEW] ${finalTitle} (${publisher})`);
+            } else {
+                // console.log(`  [SKIP] 중복 기사: ${finalTitle}`);
             }
         }
     }
     
     if (addedCount > 0) {
-        // Sort entire array by Date Descending before saving back to DB
+        // 날짜 내림차순 정렬 후 DB 저장
         appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         await ref.set(appState);
-        console.log(`✅ 수집 완료: +${addedCount}개 신규 뉴스 메인페이지 등록됨.`);
+        console.log(`✅ 성공: +${addedCount}개 신규 뉴스 등록 완료.`);
     } else {
-
-        console.log(`ℹ️ 수집 완료: 새롭게 등록할 뉴스가 없습니다.`);
+        console.log(`ℹ️ 상태: 새롭게 등록할 뉴스가 없습니다. (모두 중복이거나 검색 결과 없음)`);
     }
     
-    console.log('--- 🎉 백엔드 뉴스 수집 완료 ---');
+    console.log('--- 🎉 백엔드 뉴스 수집 프로세스 종료 ---');
     process.exit(0);
   } catch (error) {
     console.error('💥 수집 프로세스 치명적 오류:', error);

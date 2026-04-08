@@ -341,6 +341,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (gearBtn) gearBtn.onclick = () => loginOverlay.style.display='flex';
     if (loginClose) loginClose.onclick = () => loginOverlay.style.display='none';
+    
+    // 뉴스 검색 입력 실시간 연동
+    const newsSearchInput = document.getElementById('news-search-input');
+    if (newsSearchInput) {
+        newsSearchInput.oninput = () => {
+            renderNews(1); // 검색어 입력 시 1페이지부터 다시 렌더링
+        };
+    }
     if (loginOverlay) {
         loginOverlay.onclick = (e) => {
             if (e.target === loginOverlay) loginOverlay.style.display='none';
@@ -484,9 +492,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let addedCount = 0;
                 if (!appState.news) appState.news = [];
-                const existingTitles = new Set(appState.news.map(n => n.title));
+                const existingTitles = new Set(appState.news.map(n => n.title.trim()));
+                const existingUrls = new Set(appState.news.map(n => n.url.trim()));
 
-                json.items.slice(0, 10).forEach(item => {
+                json.items.slice(0, 15).forEach(item => {
                     const title = item.title || "";
                     const link = item.link || "";
                     const pubDate = item.pubDate || "";
@@ -512,18 +521,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         const lastDashIdx = decodedTitle.lastIndexOf(' - ');
                         if (lastDashIdx !== -1) {
                             publisher = decodedTitle.substring(lastDashIdx + 3).trim();
-                            // 구글뉴스는 보통 뒤에 언론사를 붙이므로 잘라내줍니다.
                             finalTitle = decodedTitle.substring(0, lastDashIdx).trim(); 
                         }
 
-                        if (!existingTitles.has(decodedTitle)) {
+                        // 엄격한 중복 체크: 제목 또는 URL 중 하나라도 있으면 제외
+                        const isDuplicate = existingTitles.has(finalTitle.trim()) || existingUrls.has(link.trim());
+
+                        if (!isDuplicate) {
                             appState.news.unshift({
                                 date: dateFormatted,
                                 tag: publisher,
                                 title: finalTitle,
                                 url: link
                             });
-                            existingTitles.add(decodedTitle);
+                            existingTitles.add(finalTitle.trim());
+                            existingUrls.add(link.trim());
                             addedCount++;
                         }
                     }

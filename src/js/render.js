@@ -88,10 +88,11 @@ function renderNews(page) {
     const container = document.getElementById('news-container');
     if(!container) return;
     
-    // UI에서 현재 필터/정렬 값 가져오기
+    // UI에서 현재 필터/정렬/검색 값 가져오기
     const sortVal = document.getElementById('news-sort-select')?.value || 'desc';
     const periodBtn = document.querySelector('.pill-btn.active');
     const periodVal = periodBtn ? periodBtn.dataset.value : 'all';
+    const searchTerm = document.getElementById('news-search-input')?.value.toLowerCase().trim() || "";
 
     let newsList = [...(appState.news || [])].filter(n => n && n.title);
 
@@ -122,10 +123,21 @@ function renderNews(page) {
         });
     }
 
-    // [2] 정렬 처리 (Sorting)
+    // [2] 키워드 검색 필터링 (Search Filtering)
+    if (searchTerm) {
+        newsList = newsList.filter(n => {
+            const titleMatch = n.title.toLowerCase().includes(searchTerm);
+            const tagMatch = (n.tag || "").toLowerCase().includes(searchTerm);
+            return titleMatch || tagMatch;
+        });
+    }
+
+    // [3] 정렬 처리 (Sorting)
     newsList.sort((a,b) => {
         const da = a.date || "";
         const db = b.date || "";
+        // 날짜가 같을 경우 제목순으로 2차 정렬하여 정렬 안정성 확보
+        if (da === db) return a.title.localeCompare(b.title);
         return sortVal === 'desc' ? db.localeCompare(da) : da.localeCompare(db);
     });
 
