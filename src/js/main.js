@@ -157,58 +157,32 @@ window.addSlot = function(type) {
     container.appendChild(div);
 };
 
-function syncToAdmin() {
-    // Video IDs Sync
-    const ytList = document.getElementById('adm-yt-list');
-    if (ytList) {
-        ytList.innerHTML = '';
-        const ids = appState.content.ytIds || (appState.content.ytId ? [appState.content.ytId] : []);
-        ids.forEach(id => {
-            window.addSlot('v');
-            ytList.lastChild.querySelector('.yt-id-val').value = id;
-        });
+    // [1] 수집 엔진 설정 동기화 (최우선으로 처리하여 '로딩 중' 방지)
+    const scrapSettings = appState.scrapSettings || { keyword: '재생의료', period: '' };
+    const kwInput = document.getElementById('scrap-keyword');
+    const pdInput = document.getElementById('scrap-period');
+    const currentLbl = document.getElementById('current-scrap-settings');
+    if (kwInput) kwInput.value = scrapSettings.keyword;
+    if (pdInput) pdInput.value = scrapSettings.period;
+    if (currentLbl) {
+        let pLabel = "전체";
+        if (scrapSettings.period === '1d') pLabel = "최근 1일";
+        else if (scrapSettings.period === '1w') pLabel = "최근 1주";
+        else if (scrapSettings.period === '7d') pLabel = "최근 1주";
+        else if (scrapSettings.period === '1m') pLabel = "최근 1개월";
+        else if (scrapSettings.period === '3m') pLabel = "최근 3개월";
+        else if (scrapSettings.period === '6m') pLabel = "최근 6개월";
+        else if (scrapSettings.period === '1y') pLabel = "최근 1년";
+        currentLbl.innerText = `현재 검색어: [${scrapSettings.keyword}], 기간: [${pLabel}]`;
     }
 
-    // Backgrounds Sync
-    const heroList = document.getElementById('adm-hero-list');
-    if (heroList) {
-        heroList.innerHTML = '';
-        (appState.theme.bgImages || []).forEach(url => {
-            window.addSlot('h');
-            heroList.lastChild.querySelector('.hero-bg-url').value = url;
-        });
-    }
-
-    // Text Sync
-    const tc = document.getElementById('admin-text-inputs');
-    if(tc) {
-        tc.innerHTML = '<h4>2. 텍스트 및 스타일 통합 관리</h4>';
-        textFields.forEach(f => {
-            const o = appState.content[f.id] || { text: f.def, sz: f.sz, col: f.col, align: f.align, font: f.font };
-            tc.innerHTML += `<div class="admin-group"><label style="font-weight:900;">${f.label}</label><textarea id="adm-txt-${f.id}" class="admin-input" style="height:100px;">${o.text || f.def}</textarea><div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;"><input type="text" id="adm-sz-${f.id}" class="admin-input" value="${o.sz || f.sz}"><input type="color" id="adm-col-${f.id}" class="admin-input" value="${o.col || f.col}" style="padding:0;"><select id="adm-align-${f.id}" class="admin-input"><option value="left" ${o.align==='left'?'selected':''}>좌</option><option value="center" ${o.align==='center'?'selected':''}>중</option></select><select id="adm-font-${f.id}" class="admin-input"><option value="'Noto Sans KR',sans-serif" ${o.font==="'Noto Sans KR',sans-serif"?'selected':''}>고딕</option><option value="'Inter',sans-serif" ${o.font==="'Inter',sans-serif"?'selected':''}>테크</option></select></div></div>`;
-        });
-    }
-    
-    // List Sync Helpers
-    const syncList = (key, listId, urlClass) => {
-        const list = document.getElementById(listId);
-        if(!list) return;
-        list.innerHTML = '';
-        (appState.images[key] || []).forEach((url, i) => {
-            window.addSlot(key === 'ceremony' ? 'c' : 'o');
-            const g = list.lastChild;
-            g.querySelector('.img-url').value = url;
-            g.querySelector('.img-desc').value = appState.images[`${key}Desc`][i] || '';
-        });
-    }
-    syncList('ceremony', 'adm-img-list-c');
-    syncList('office', 'adm-img-list-o');
-
+    // [2] 뉴스 목록 리셋 및 동기화 (컨테이너 구조 유지)
     const newsList = document.getElementById('adm-news-list');
-    if(newsList) {
-        newsList.innerHTML = `
+    if (newsList) {
+        // 내부 검색창과 요약 컨테이너는 남겨두고 슬롯만 초기화
+        const searchUI = `
             <h5 style="font-size:14px; font-weight:800; color:#475569; margin-bottom:15px;">📰 수집된 개별 뉴스 데이터 목록 (직접 수정/삭제 가능)</h5>
-            <!-- 관리자 패널 전용 프리미엄 검색창 -->
+            <div id="duplicate-summary-container"></div>
             <div class="admin-search-container" style="margin-bottom:15px;">
                 <div class="search-box" style="display:flex; align-items:center; background:#fff; padding:10px 15px; border-radius:10px; border:1px solid #cbd5e1;">
                     <i class="fa-solid fa-magnifying-glass" style="color:#94a3b8; margin-right:10px;"></i>
@@ -216,51 +190,93 @@ function syncToAdmin() {
                 </div>
             </div>`;
         
-        if (appState.news) {
-            appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // 기존 슬롯 제거
+        const existingSlots = newsList.querySelectorAll('.admin-slot-n');
+        existingSlots.forEach(s => s.remove());
+        
+        // UI 기본 구조가 없으면 삽입
+        if (!document.getElementById('admin-news-search')) {
+            newsList.innerHTML = searchUI;
         }
 
-        (appState.news || []).forEach(n => {
-            window.addSlot('n');
-            const g = newsList.lastChild;
-            g.querySelector('.news-date').value = n.date || '';
-            g.querySelector('.news-tag').value = n.tag || '';
-            g.querySelector('.news-title').value = n.title || '';
-            g.querySelector('.news-url').value = n.url || '';
-        });
-        
-        // 항목 초기화 후 1페이지 렌더링
-        window.renderAdminNewsPage(1);
+        if (appState.news) {
+            appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
+            appState.news.forEach(n => {
+                window.addSlot('n');
+                const g = newsList.lastChild;
+                if (g) {
+                    const d = g.querySelector('.news-date'); if(d) d.value = n.date || '';
+                    const t = g.querySelector('.news-tag'); if(t) t.value = n.tag || '';
+                    const ti = g.querySelector('.news-title'); if(ti) ti.value = n.title || '';
+                    const u = g.querySelector('.news-url'); if(u) u.value = n.url || '';
+                }
+            });
+        }
     }
 
-    // Scrap settings Sync
-    const scrapSettings = appState.scrapSettings || { keyword: '재생의료', period: '' };
-    const kwInput = document.getElementById('scrap-keyword');
-    const pdInput = document.getElementById('scrap-period');
-    const currentLbl = document.getElementById('current-scrap-settings');
-    if(kwInput) kwInput.value = scrapSettings.keyword;
-    if(pdInput) pdInput.value = scrapSettings.period;
-    if(currentLbl) {
-        let pLabel = "전체";
-        if(scrapSettings.period === '1d') pLabel = "최근 1일";
-        else if(scrapSettings.period === '7d') pLabel = "최근 1주";
-        else if(scrapSettings.period === '1m') pLabel = "최근 1개월";
-        else if(scrapSettings.period === '3m') pLabel = "최근 3개월";
-        else if(scrapSettings.period === '6m') pLabel = "최근 6개월";
-        else if(scrapSettings.period === '1y') pLabel = "최근 1년";
-        currentLbl.innerText = `키워드: [${scrapSettings.keyword}], 기간: [${pLabel}]`;
+    // [3] 기타 텍스트 및 이미지 동기화
+    const tc = document.getElementById('admin-text-inputs');
+    if (tc) {
+        tc.innerHTML = '<h4>2. 텍스트 및 스타일 통합 관리</h4>';
+        textFields.forEach(f => {
+            const o = appState.content[f.id] || { text: f.def, sz: f.sz, col: f.col, align: f.align, font: f.font };
+            tc.innerHTML += `<div class="admin-group"><label style="font-weight:900;">${f.label}</label><textarea id="adm-txt-${f.id}" class="admin-input" style="height:100px;">${o.text || f.def}</textarea><div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;"><input type="text" id="adm-sz-${f.id}" class="admin-input" value="${o.sz || f.sz}"><input type="color" id="adm-col-${f.id}" class="admin-input" value="${o.col || f.col}" style="padding:0;"><select id="adm-align-${f.id}" class="admin-input"><option value="left" ${o.align==='left'?'selected':''}>좌</option><option value="center" ${o.align==='center'?'selected':''}>중</option></select><select id="adm-font-${f.id}" class="admin-input"><option value="'Noto Sans KR',sans-serif" ${o.font==="'Noto Sans KR',sans-serif"?'selected':''}>고딕</option><option value="'Inter',sans-serif" ${o.font==="'Inter',sans-serif"?'selected':''}>테크</option></select></div></div>`;
+        });
     }
+
+    const syncList = (key, listId, urlClass) => {
+        const list = document.getElementById(listId);
+        if (!list) return;
+        list.innerHTML = '';
+        (appState.images[key] || []).forEach((url, i) => {
+            window.addSlot(key === 'ceremony' ? 'c' : 'o');
+            const g = list.lastChild;
+            if (g) {
+                const u = g.querySelector('.img-url'); if(u) u.value = url;
+                const d = g.querySelector('.img-desc'); if(d) d.value = appState.images[`${key}Desc`][i] || '';
+            }
+        });
+    }
+    syncList('ceremony', 'adm-img-list-c');
+    syncList('office', 'adm-img-list-o');
 
     const extraTextList = document.getElementById('adm-extra-text-list');
-    if(extraTextList) {
+    if (extraTextList) {
         extraTextList.innerHTML = '';
         (appState.dynamicTexts || []).forEach(t => {
             window.addSlot('t');
             const g = extraTextList.lastChild;
-            g.querySelector('.extra-text-title').value = t.title;
-            g.querySelector('.extra-text-body').value = t.body;
+            if (g) {
+                const ti = g.querySelector('.extra-text-title'); if(ti) ti.value = t.title;
+                const b = g.querySelector('.extra-text-body'); if(b) b.value = t.body;
+            }
         });
     }
+
+    // [4] 영상 슬롯 및 배경 이미지 동기화
+    const ytList = document.getElementById('adm-yt-list');
+    if (ytList) {
+        ytList.innerHTML = '';
+        const ids = appState.content.ytIds || (appState.content.ytId ? [appState.content.ytId] : []);
+        ids.forEach(id => {
+            window.addSlot('v');
+            const i = ytList.lastChild.querySelector('.yt-id-val');
+            if(i) i.value = id;
+        });
+    }
+
+    const heroList = document.getElementById('adm-hero-list');
+    if (heroList) {
+        heroList.innerHTML = '';
+        (appState.theme.bgImages || []).forEach(url => {
+            window.addSlot('h');
+            const i = heroList.lastChild.querySelector('.hero-bg-url');
+            if(i) i.value = url;
+        });
+    }
+
+    // 최종적으로 뉴스 페이지 렌더링
+    window.renderAdminNewsPage(1);
 }
 
 // Admin News Pagination Logic
@@ -270,137 +286,126 @@ window.renderAdminNewsPage = function(page) {
     const pagination = document.getElementById('adm-news-pagination');
     if (!pagination) return;
 
-    const searchTerm = document.getElementById('admin-news-search')?.value.toLowerCase().trim() || "";
-    let listItems = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n'));
+    try {
+        const searchTerm = document.getElementById('admin-news-search')?.value.toLowerCase().trim() || "";
+        const allItems = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n'));
+        const listItems = [...allItems];
 
-    // [1] 관리자 검색 필터링
-    if (searchTerm) {
-        listItems.forEach(item => {
-            const title = item.querySelector('.news-title').value.toLowerCase();
-            const tag = item.querySelector('.news-tag').value.toLowerCase();
-            if (title.includes(searchTerm) || tag.includes(searchTerm)) {
-                item.dataset.filterMatch = "true";
+        const seenTitles = new Map();
+        const seenUrls = new Map();
+
+        // [1] 중복 감지 및 강조 표시 (전체 데이터 기준, 검색 여부와 무관)
+        allItems.forEach(item => {
+            const titleInput = item.querySelector('.news-title');
+            const urlInput = item.querySelector('.news-url');
+            if(!titleInput || !urlInput) return;
+
+            const title = titleInput.value.trim();
+            const url = urlInput.value.trim();
+            
+            const normTitle = title.toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
+            const normUrl = url.split('?')[0].split('#')[0].trim();
+
+            item.classList.remove('duplicate-card');
+            const oldBadge = item.querySelector('.duplicate-reason-badge');
+            if (oldBadge) oldBadge.remove();
+
+            if (title && url) {
+                let reason = "";
+                if (seenTitles.has(normTitle)) reason = "제목 중복";
+                if (seenUrls.has(normUrl)) reason = reason ? "제목/URL 중복" : "URL 중복";
+
+                if (reason) {
+                    item.classList.add('duplicate-card');
+                    const badge = document.createElement('div');
+                    badge.className = 'duplicate-reason-badge';
+                    badge.innerText = `⚠️ ${reason}`;
+                    item.appendChild(badge);
+                } else {
+                    seenTitles.set(normTitle, item);
+                    seenUrls.set(normUrl, item);
+                }
+            }
+        });
+
+        // [2] 검색 필터링 및 페이지네이션 대상 선별
+        let viewItems = [...allItems];
+        if (searchTerm) {
+            viewItems = allItems.filter(item => {
+                const ti = item.querySelector('.news-title')?.value.toLowerCase() || "";
+                const ta = item.querySelector('.news-tag')?.value.toLowerCase() || "";
+                const match = ti.includes(searchTerm) || ta.includes(searchTerm);
+                if (!match) item.style.display = 'none';
+                return match;
+            });
+        }
+
+        // [3] 중복 요약 정보 업데이트
+        const dupContainer = document.getElementById('duplicate-summary-container');
+        if (dupContainer) {
+            const dupCount = allItems.filter(item => item.classList.contains('duplicate-card')).length;
+            if (dupCount > 0) {
+                dupContainer.innerHTML = `
+                    <div class="dup-summary-box">
+                        <div class="dup-count-text">
+                            <i class="fa-solid fa-circle-exclamation" style="font-size:18px;"></i>
+                            현재 <strong>${dupCount}개</strong>의 중복된 기사가 발견되었습니다.
+                        </div>
+                        <button class="dup-cleanup-btn" onclick="window.cleanupDuplicates()">
+                            <i class="fa-solid fa-broom" style="margin-right:5px;"></i> 중복 기사 일괄 정리
+                        </button>
+                    </div>`;
             } else {
-                item.dataset.filterMatch = "false";
+                dupContainer.innerHTML = '';
+            }
+        }
+
+        const totalItems = viewItems.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        window.adminNewsCurrentPage = page;
+
+        // Show/Hide Items
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+
+        viewItems.forEach((item, index) => {
+            if (index >= startIndex && index < endIndex) {
+                item.style.display = 'block';
+            } else {
                 item.style.display = 'none';
             }
         });
-        listItems = listItems.filter(item => item.dataset.filterMatch === "true");
-    } else {
-        listItems.forEach(item => item.dataset.filterMatch = "true");
-    }
 
-    allItems.forEach(item => {
-        const title = item.querySelector('.news-title').value.trim();
-        const url = item.querySelector('.news-url').value.trim();
-        
-        // 정규화 (공백 제거, 소문자, 특수문자 제거 후 비교용)
-        const normTitle = title.toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
-        const normUrl = url.split('?')[0].split('#')[0].trim();
+        // Render Pagination Buttons
+        pagination.innerHTML = '';
+        if (totalPages <= 1) return;
 
-        item.classList.remove('duplicate-card');
-        const oldBadge = item.querySelector('.duplicate-reason-badge');
-        if (oldBadge) oldBadge.remove();
+        const currentGroup = Math.ceil(page / 5);
+        const startPage = (currentGroup - 1) * 5 + 1;
+        let endPage = startPage + 4;
+        if (endPage > totalPages) endPage = totalPages;
 
-        if (title && url) {
-            let reason = "";
-            if (seenTitles.has(normTitle)) reason = "제목 중복";
-            if (seenUrls.has(normUrl)) reason = reason ? "제목/URL 중복" : "URL 중복";
-
-            if (reason) {
-                item.classList.add('duplicate-card');
-                const badge = document.createElement('div');
-                badge.className = 'duplicate-reason-badge';
-                badge.innerText = `⚠️ ${reason}`;
-                item.appendChild(badge);
-            } else {
-                seenTitles.set(normTitle, item);
-                seenUrls.set(normUrl, item);
-            }
+        if (startPage > 1) {
+            const btn = document.createElement('button'); btn.innerText = '‹'; btn.className = 'page-btn';
+            btn.onclick = () => window.renderAdminNewsPage(startPage - 1);
+            pagination.appendChild(btn);
         }
-    });
-
-    // [3] 중복 요약 정보 업데이트
-    const dupContainer = document.getElementById('duplicate-summary-container');
-    if (dupContainer) {
-        const dupCount = allItems.filter(item => item.classList.contains('duplicate-card')).length;
-        if (dupCount > 0) {
-            dupContainer.innerHTML = `
-                <div class="dup-summary-box">
-                    <div class="dup-count-text">
-                        <i class="fa-solid fa-circle-exclamation" style="font-size:18px;"></i>
-                        현재 <strong>${dupCount}개</strong>의 중복된 기사가 발견되었습니다.
-                    </div>
-                    <button class="dup-cleanup-btn" onclick="window.cleanupDuplicates()">
-                        <i class="fa-solid fa-broom" style="margin-right:5px;"></i> 중복 기사 일괄 정리
-                    </button>
-                </div>`;
-        } else {
-            dupContainer.innerHTML = '';
+        for (let i = startPage; i <= endPage; i++) {
+            const btn = document.createElement('button'); btn.innerText = i;
+            btn.className = `page-btn ${i === page ? 'active' : ''}`;
+            btn.onclick = () => window.renderAdminNewsPage(i);
+            pagination.appendChild(btn);
         }
-    }
-
-    const totalItems = listItems.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-
-    if (page < 1) page = 1;
-    if (page > totalPages) page = totalPages;
-    window.adminNewsCurrentPage = page;
-
-    // Show/Hide Items
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-
-    listItems.forEach((item, index) => {
-        if (index >= startIndex && index < endIndex) {
-            item.style.display = 'block';
-        } else {
-            item.style.display = 'none';
+        if (endPage < totalPages) {
+            const btn = document.createElement('button'); btn.innerText = '›'; btn.className = 'page-btn';
+            btn.onclick = () => window.renderAdminNewsPage(endPage + 1);
+            pagination.appendChild(btn);
         }
-    });
-
-    // Render Pagination Buttons
-    pagination.innerHTML = '';
-    
-    // Previous Group Button (<)
-    const currentGroup = Math.ceil(page / 5);
-    const startPage = (currentGroup - 1) * 5 + 1;
-    let endPage = startPage + 4;
-    if (endPage > totalPages) endPage = totalPages;
-
-    if (startPage > 1) {
-        const prevBtn = document.createElement('button');
-        prevBtn.innerText = '‹';
-        prevBtn.className = 'page-btn';
-        prevBtn.onclick = () => {
-            window.renderAdminNewsPage(startPage - 1);
-            prevBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
-        };
-        pagination.appendChild(prevBtn);
-    }
-
-    // Number Buttons
-    for (let i = startPage; i <= endPage; i++) {
-        const btn = document.createElement('button');
-        btn.innerText = i;
-        btn.className = `page-btn ${i === page ? 'active' : ''}`;
-        btn.onclick = () => {
-            window.renderAdminNewsPage(i);
-            btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-        };
-        pagination.appendChild(btn);
-    }
-
-    // Next Group Button (>)
-    if (endPage < totalPages) {
-        const nextBtn = document.createElement('button');
-        nextBtn.innerText = '›';
-        nextBtn.className = 'page-btn';
-        nextBtn.onclick = () => {
-            window.renderAdminNewsPage(endPage + 1);
-            nextBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
-        };
-        pagination.appendChild(nextBtn);
+    } catch(err) {
+        console.error("renderAdminNewsPage Error:", err);
     }
 };
 
@@ -579,19 +584,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const keyword = document.getElementById('scrap-keyword').value.trim() || '재생의료';
             const period = document.getElementById('scrap-period').value;
             
+            // 최신 입력값 반영
             appState.scrapSettings = { keyword, period };
             
-            status.innerText = `🔄 수집 설정을 저장하는 중...`;
+            status.innerText = `🔄 수집 설정을 서버에 저장 중...`;
             status.style.display = 'block';
             status.style.color = '#10b981';
             saveScrapBtn.disabled = true;
 
             try {
+                // 단순하게 현재 입력된 값을 appState 최우선 반영하여 저장
+                // Final Save와 동일한 로직으로 단순화하여 충돌 방지
                 await db.ref('wfirm').set(appState);
-                status.innerText = `✅ 완료: "${keyword}" 검색 설정이 등록되었습니다. 매일 아침 9시(한국시간)에 서버가 자동으로 뉴스를 수집합니다.`;
-                syncToAdmin(); // Sync UI
+                
+                status.innerText = `✅ 완료: "${keyword}" 설정이 저장되었습니다.`;
+                status.style.color = '#10b981';
+                syncToAdmin(); 
             } catch (e) {
-                console.error(e);
+                console.error("Scrap Settings Save Error:", e);
                 status.innerText = '❌ 설정 저장 중 오류가 발생했습니다.';
                 status.style.color = '#ef4444';
             }
