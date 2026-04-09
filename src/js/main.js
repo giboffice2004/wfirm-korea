@@ -181,8 +181,7 @@ function syncToAdmin() {
         else if (scrapSettings.period === '1m') pLabel = "최근 1개월";
         else if (scrapSettings.period === '3m') pLabel = "최근 3개월";
         else if (scrapSettings.period === '6m') pLabel = "최근 6개월";
-        else if (scrapSettings.period === '1y') pLabel = "최근 1년";
-        currentLbl.innerText = `현재 검색어: [${scrapSettings.keyword}], 기간: [${pLabel}], 개수: [${scrapSettings.count || 10}개]`;
+        currentLbl.innerText = `검색어: [${scrapSettings.keyword}], 기간: [${pLabel}], 개수: [${scrapSettings.count || 10}개] / 준비 됨`;
     }
 
     // [2] 뉴스 목록 리셋 및 동기화 (컨테이너 구조 유지)
