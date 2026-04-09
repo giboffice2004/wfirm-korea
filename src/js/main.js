@@ -158,12 +158,21 @@ window.addSlot = function(type) {
 };
 function syncToAdmin() {
     // [1] 수집 엔진 설정 동기화 (최우선으로 처리하여 '로딩 중' 방지)
-    const scrapSettings = appState.scrapSettings || { keyword: '재생의료', period: '' };
+    const scrapSettings = appState.scrapSettings || { keyword: '재생의료', period: '', count: 10 };
     const kwInput = document.getElementById('scrap-keyword');
     const pdInput = document.getElementById('scrap-period');
+    const ctInput = document.getElementById('scrap-count');
     const currentLbl = document.getElementById('current-scrap-settings');
+    const scrapNowBtn = document.getElementById('btn-scrap-now');
+
     if (kwInput) kwInput.value = scrapSettings.keyword;
     if (pdInput) pdInput.value = scrapSettings.period;
+    if (ctInput) ctInput.value = scrapSettings.count || 10;
+    
+    if (scrapNowBtn) {
+        scrapNowBtn.innerText = `위 설정대로 지금 즉시 ${scrapSettings.count || 10}개 뉴스 스크랩`;
+    }
+    
     if (currentLbl) {
         let pLabel = "전체";
         if (scrapSettings.period === '1d') pLabel = "최근 1일";
@@ -173,7 +182,7 @@ function syncToAdmin() {
         else if (scrapSettings.period === '3m') pLabel = "최근 3개월";
         else if (scrapSettings.period === '6m') pLabel = "최근 6개월";
         else if (scrapSettings.period === '1y') pLabel = "최근 1년";
-        currentLbl.innerText = `현재 검색어: [${scrapSettings.keyword}], 기간: [${pLabel}]`;
+        currentLbl.innerText = `현재 검색어: [${scrapSettings.keyword}], 기간: [${pLabel}], 개수: [${scrapSettings.count || 10}개]`;
     }
 
     // [2] 뉴스 목록 리셋 및 동기화 (컨테이너 구조 유지)
@@ -584,9 +593,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const status = document.getElementById('scrap-status');
             const keyword = document.getElementById('scrap-keyword').value.trim() || '재생의료';
             const period = document.getElementById('scrap-period').value;
+            const count = parseInt(document.getElementById('scrap-count').value) || 10;
             
             // 최신 입력값 반영
-            appState.scrapSettings = { keyword, period };
+            appState.scrapSettings = { keyword, period, count };
             
             status.innerText = `🔄 수집 설정을 서버에 저장 중...`;
             status.style.display = 'block';
@@ -647,7 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const existingTitles = new Set(appState.news.map(n => n.title.trim()));
                 const existingUrls = new Set(appState.news.map(n => n.url.trim()));
 
-                json.items.slice(0, 15).forEach(item => {
+                json.items.slice(0, appState.scrapSettings?.count || 15).forEach(item => {
                     const title = item.title || "";
                     const link = item.link || "";
                     const pubDate = item.pubDate || "";

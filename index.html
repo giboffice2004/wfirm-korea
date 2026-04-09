@@ -202,7 +202,7 @@
                     <div style="background:#dcfce7; color:#166534; padding:6px 14px; border-radius:30px; font-size:12px; font-weight:800; border:1px solid #bbf7d0;">가동 준비 됨</div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:15px; margin-bottom:25px;">
+                <div style="display:grid; grid-template-columns: 1.2fr 1fr 0.8fr; gap:15px; margin-bottom:25px;">
                     <div>
                         <label style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px; display:block;">새로운 뉴스 검색 키워드</label>
                         <input type="text" id="scrap-keyword" class="admin-input" placeholder="예: 재생의료" style="margin-bottom:0; background:#f1f5f9; border:none; padding:16px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02)">
@@ -218,6 +218,10 @@
                             <option value="6m">최근 6개월</option>
                             <option value="1y">최근 1년</option>
                         </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px; display:block;">최대 수집 개수</label>
+                        <input type="number" id="scrap-count" class="admin-input" placeholder="10" min="1" max="100" style="margin-bottom:0; background:#f1f5f9; border:none; padding:16px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02)">
                     </div>
                 </div>
                 <button id="btn-save-scrap-settings" style="width:100%; padding:18px; background:#10b981; color:#fff; border:none; border-radius:12px; font-weight:800; cursor:pointer; font-size:15px; transition:0.3s; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">엔진 설정 업데이트 및 저장</button>

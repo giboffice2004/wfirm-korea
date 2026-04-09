@@ -36,11 +36,12 @@ async function scrapeNews() {
     if (!appState.news) appState.news = [];
     
     // 수집 설정 가져오기 (없으면 기본값 사용)
-    const settings = appState.scrapSettings || { keyword: '재생의료', period: '7d' };
+    const settings = appState.scrapSettings || { keyword: '재생의료', period: '7d', count: 15 };
     const keyword = settings.keyword || '재생의료';
-    const period = settings.period || '7d'; // 기본값 1주로 상향 조정하여 검색 결과 확보
+    const period = settings.period || '7d'; 
+    const count = parseInt(settings.count) || 15;
     
-    console.log(`📡 [수집 시작] 키워드: "${keyword}", 기간: "${period || '전체'}"`);
+    console.log(`📡 [수집 시작] 키워드: "${keyword}", 기간: "${period || '전체'}", 개수: ${count}`);
 
     let query = keyword;
     if (period) {
@@ -64,7 +65,7 @@ async function scrapeNews() {
     const existingTitles = new Set(appState.news.map(n => n.title.trim().toLowerCase()));
     const existingUrls = new Set(appState.news.map(n => (n.url || "").trim().toLowerCase()));
     
-    for (const item of feed.items.slice(0, 15)) { 
+    for (const item of feed.items.slice(0, count)) { 
         const rawTitle = item.title;
         const link = (item.link || "").trim().toLowerCase();
         const pubDate = item.pubDate;
