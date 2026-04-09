@@ -14,16 +14,16 @@ jobs:
     
     steps:
       - name: 저장소 코드 체크아웃
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Node.js 18 환경 설정
-        uses: actions/setup-node@v3
+      - name: Node.js 20 환경 설정
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           
       - name: 의존성 패키지 설치
-        run: npm ci || npm install
+        run: npm install
         
       - name: 뉴스 백엔드 자동 수집 구동 (Firebase 업데이트)
         env:

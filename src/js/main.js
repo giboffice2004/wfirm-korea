@@ -440,8 +440,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Final Save logic
     document.getElementById('btn-final-save').onclick = async () => {
         const status = document.getElementById('save-status');
-        status.innerText = 'Synchronizing...'; 
+        const saveBtn = document.getElementById('btn-final-save');
+        
+        status.innerText = '저장 중...'; 
         status.style.display = 'block';
+        status.style.color = 'var(--primary)';
+        saveBtn.disabled = true;
+
+        // 타임아웃 감시 (전송이 10초 이상 지연될 경우 안내)
+        const saveTimeout = setTimeout(() => {
+            if (saveBtn.disabled) {
+                status.innerText = '⚠️ 응답이 지연되고 있습니다. 네트워크 상태를 확인해 주세요.';
+                status.style.color = '#f59e0b';
+                saveBtn.disabled = false;
+            }
+        }, 12000);
 
         // Collect Videos
         appState.content.ytIds = Array.from(document.querySelectorAll('.yt-id-val')).map(i => i.value).filter(v => v);
@@ -485,10 +498,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             await db.ref('wfirm').set(appState);
-            status.innerText = '✅ Global Sync Completed!';
+            clearTimeout(saveTimeout);
+            status.innerText = '✅ 저장완료';
+            status.style.color = '#10b981';
             renderAll();
-        } catch(e) { status.innerText = '❌ Error occurred'; }
-        setTimeout(() => status.style.display='none', 3000);
+        } catch(e) { 
+            clearTimeout(saveTimeout);
+            console.error("Save Error:", e);
+            status.innerText = '❌ 저장 중 오류 발생 (데이터 권한 또는 네트워크 확인)';
+            status.style.color = '#ef4444';
+        }
+        
+        saveBtn.disabled = false;
+        setTimeout(() => {
+            if (status.innerText.includes('완료') || status.innerText.includes('오류')) {
+                status.style.display='none';
+            }
+        }, 4000);
     };
 
     // Interaction Observer for reveal effects

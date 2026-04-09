@@ -36,11 +36,11 @@ async function scrapeNews() {
     if (!appState.news) appState.news = [];
     
     // 수집 설정 가져오기 (없으면 기본값 사용)
-    const settings = appState.scrapSettings || { keyword: '재생의료', period: '1m' };
+    const settings = appState.scrapSettings || { keyword: '재생의료', period: '7d' };
     const keyword = settings.keyword || '재생의료';
-    const period = settings.period || ''; // '1d', '7d', '1m', 등
+    const period = settings.period || '7d'; // 기본값 1주로 상향 조정하여 검색 결과 확보
     
-    console.log(`📡 수집 설정: 키워드="${keyword}", 기간="${period || '전체'}"`);
+    console.log(`📡 [수집 시작] 키워드: "${keyword}", 기간: "${period || '전체'}"`);
 
     let query = keyword;
     if (period) {
@@ -117,16 +117,21 @@ async function scrapeNews() {
     }
     
     if (addedCount > 0) {
-        // 날짜 내림차순 정렬 후 DB 저장
+        // 날짜 내림차순 정렬 후 DB 저장 (최근 기사가 위로)
         appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        // 데이터가 너무 방대해지는 것을 방지하기 위해 최대 200개까지만 유지 관리
+        if (appState.news.length > 200) {
+            appState.news = appState.news.slice(0, 200);
+        }
 
         await ref.set(appState);
-        console.log(`✅ 성공: +${addedCount}개 신규 뉴스 등록 완료.`);
+        console.log(`✅ [수집 완료] 총 ${addedCount}개의 신규 뉴스가 안전하게 저장되었습니다.`);
     } else {
-        console.log(`ℹ️ 상태: 새롭게 등록할 뉴스가 없습니다. (모두 중복이거나 검색 결과 없음)`);
+        console.log(`ℹ️ [상태 확인] 이미 모든 뉴스가 최신 상태입니다. (추가할 새로운 소식 없음)`);
     }
     
-    console.log('--- 🎉 백엔드 뉴스 수집 프로세스 종료 ---');
+    console.log('--- 🎉 WFIRM Korea 자동 수집 엔진 종료 ---');
     process.exit(0);
   } catch (error) {
     console.error('💥 수집 프로세스 치명적 오류:', error);
