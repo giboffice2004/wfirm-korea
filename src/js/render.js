@@ -190,58 +190,66 @@ function renderNews(page) {
 
             // [추가] 처음으로 버튼
             const firstBtn = document.createElement('button'); 
-            firstBtn.innerText = '«'; firstBtn.className = 'page-btn';
+            firstBtn.type = 'button';
+            firstBtn.innerText = '|<'; firstBtn.className = 'page-btn';
             firstBtn.title = '처음으로';
             if (page === 1) firstBtn.disabled = true;
-            firstBtn.onclick = () => { renderNews(1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            firstBtn.onclick = () => { renderNews(1); };
             pagin.appendChild(firstBtn);
 
             // [추가] 5페이지 이전 버튼 (이전 그룹)
             const prevBlockBtn = document.createElement('button'); 
+            prevBlockBtn.type = 'button';
             prevBlockBtn.innerText = '‹‹'; prevBlockBtn.className = 'page-btn';
             prevBlockBtn.title = '5페이지 이전';
             if (currentGroup === 1) prevBlockBtn.disabled = true;
-            prevBlockBtn.onclick = () => { renderNews(startPage - 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            prevBlockBtn.onclick = () => { renderNews(startPage - 1); };
             pagin.appendChild(prevBlockBtn);
 
             // [기존] 1페이지 이전 버튼
             const prevBtn = document.createElement('button'); 
+            prevBtn.type = 'button';
             prevBtn.innerText = '‹'; prevBtn.className = 'page-btn';
             prevBtn.title = '이전 페이지';
             if (page === 1) prevBtn.disabled = true;
-            prevBtn.onclick = () => { renderNews(page - 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            prevBtn.onclick = () => { renderNews(page - 1); };
             pagin.appendChild(prevBtn);
 
             // 페이지 숫자 버튼
             for(let i=startPage; i<=endPage; i++) {
-                const btn = document.createElement('button'); btn.innerText = i; 
+                const btn = document.createElement('button'); 
+                btn.type = 'button';
+                btn.innerText = i; 
                 btn.className = 'page-btn' + (i===page?' active':'');
-                btn.onclick = () => { renderNews(i); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+                btn.onclick = () => { renderNews(i); };
                 pagin.appendChild(btn);
             }
 
             // [기존] 1페이지 다음 버튼
             const nextBtn = document.createElement('button'); 
+            nextBtn.type = 'button';
             nextBtn.innerText = '›'; nextBtn.className = 'page-btn';
             nextBtn.title = '다음 페이지';
             if (page === total) nextBtn.disabled = true;
-            nextBtn.onclick = () => { renderNews(page + 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            nextBtn.onclick = () => { renderNews(page + 1); };
             pagin.appendChild(nextBtn);
 
             // [추가] 5페이지 다음 버튼 (다음 그룹)
             const nextBlockBtn = document.createElement('button'); 
+            nextBlockBtn.type = 'button';
             nextBlockBtn.innerText = '››'; nextBlockBtn.className = 'page-btn';
             nextBlockBtn.title = '5페이지 다음';
             if (endPage === total) nextBlockBtn.disabled = true;
-            nextBlockBtn.onclick = () => { renderNews(endPage + 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            nextBlockBtn.onclick = () => { renderNews(endPage + 1); };
             pagin.appendChild(nextBlockBtn);
 
             // [추가] 끝으로 버튼
             const lastBtn = document.createElement('button'); 
-            lastBtn.innerText = '»'; lastBtn.className = 'page-btn';
+            lastBtn.type = 'button';
+            lastBtn.innerText = '>|'; lastBtn.className = 'page-btn';
             lastBtn.title = '끝으로';
             if (page === total) lastBtn.disabled = true;
-            lastBtn.onclick = () => { renderNews(total); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            lastBtn.onclick = () => { renderNews(total); };
             pagin.appendChild(lastBtn);
         }
     }
