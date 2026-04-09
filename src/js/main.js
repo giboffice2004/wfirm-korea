@@ -266,7 +266,7 @@ function syncToAdmin() {
 // Admin News Pagination Logic
 window.adminNewsCurrentPage = 1;
 window.renderAdminNewsPage = function(page) {
-    const itemsPerPage = 10;
+    const itemsPerPage = 6;
     const pagination = document.getElementById('adm-news-pagination');
     if (!pagination) return;
 
@@ -517,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             status.innerText = '📡 서버로 전송 중... (잠시만 기다려 주세요)';
             
-            appState.news = Array.from(document.querySelectorAll('#adm-news-list > div')).map(div => ({
+            appState.news = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n')).map(div => ({
                 date:  div.querySelector('.news-date').value,
                 tag:   div.querySelector('.news-tag').value,
                 title: div.querySelector('.news-title').value,
