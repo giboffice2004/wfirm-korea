@@ -156,7 +156,7 @@ window.addSlot = function(type) {
 
     container.appendChild(div);
 };
-
+function syncToAdmin() {
     // [1] 수집 엔진 설정 동기화 (최우선으로 처리하여 '로딩 중' 방지)
     const scrapSettings = appState.scrapSettings || { keyword: '재생의료', period: '' };
     const kwInput = document.getElementById('scrap-keyword');
