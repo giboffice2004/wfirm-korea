@@ -96,20 +96,22 @@ async function scrapeNews() {
                 finalTitle = decodedTitle.substring(0, lastDashIdx).trim(); 
             }
 
-            const finalTitleKey = finalTitle.trim().toLowerCase();
+            // [공정] 제목 및 URL 정규화 비교 (중복 차단 확률 증대)
+            const normTitle = finalTitle.trim().toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
+            const normUrl = link.trim().split('?')[0].split('#')[0];
 
-            // [핵심] 제목 또는 URL 중 하나라도 일치하면 중복으로 간주 (정규화된 키 기준)
-            const isDuplicate = existingTitles.has(finalTitleKey) || existingUrls.has(link);
+            const isDuplicate = Array.from(existingTitles).some(t => t.replace(/[^a-zA-Z0-9가-힣]/g, '').toLowerCase() === normTitle) || 
+                              Array.from(existingUrls).some(u => u.trim().split('?')[0].split('#')[0] === normUrl);
 
             if (!isDuplicate) {
                 appState.news.unshift({
                     date: dateFormatted,
                     tag: publisher,
                     title: finalTitle,
-                    url: item.link // 원본 링크 저장
+                    url: item.link
                 });
-                existingTitles.add(finalTitleKey);
-                existingUrls.add(link);
+                existingTitles.add(finalTitle.trim());
+                existingUrls.add(link.trim());
                 addedCount++;
                 console.log(`  [NEW] ${finalTitle} (${publisher})`);
             }

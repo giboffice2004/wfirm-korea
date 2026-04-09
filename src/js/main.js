@@ -290,24 +290,22 @@ window.renderAdminNewsPage = function(page) {
         listItems.forEach(item => item.dataset.filterMatch = "true");
     }
 
-    // [2] 중복 감지 및 강조 표시 (전체 데이터 기준)
-    const allItems = Array.from(document.querySelectorAll('#adm-news-list .admin-slot-n'));
-    const seenTitles = new Map(); // 타이틀과 해당 아이템 매핑
-    const seenUrls = new Map();   // URL과 해당 아이템 매핑
-    
     allItems.forEach(item => {
-        const title = item.querySelector('.news-title').value.trim().toLowerCase();
-        const url = item.querySelector('.news-url').value.trim().toLowerCase();
+        const title = item.querySelector('.news-title').value.trim();
+        const url = item.querySelector('.news-url').value.trim();
         
+        // 정규화 (공백 제거, 소문자, 특수문자 제거 후 비교용)
+        const normTitle = title.toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
+        const normUrl = url.split('?')[0].split('#')[0].trim();
+
         item.classList.remove('duplicate-card');
-        // 기존 사유 배지 제거
         const oldBadge = item.querySelector('.duplicate-reason-badge');
         if (oldBadge) oldBadge.remove();
 
         if (title && url) {
             let reason = "";
-            if (seenTitles.has(title)) reason = "제목 중복";
-            if (seenUrls.has(url)) reason = reason ? "제목/URL 중복" : "URL 중복";
+            if (seenTitles.has(normTitle)) reason = "제목 중복";
+            if (seenUrls.has(normUrl)) reason = reason ? "제목/URL 중복" : "URL 중복";
 
             if (reason) {
                 item.classList.add('duplicate-card');
@@ -316,11 +314,31 @@ window.renderAdminNewsPage = function(page) {
                 badge.innerText = `⚠️ ${reason}`;
                 item.appendChild(badge);
             } else {
-                seenTitles.set(title, item);
-                seenUrls.set(url, item);
+                seenTitles.set(normTitle, item);
+                seenUrls.set(normUrl, item);
             }
         }
     });
+
+    // [3] 중복 요약 정보 업데이트
+    const dupContainer = document.getElementById('duplicate-summary-container');
+    if (dupContainer) {
+        const dupCount = allItems.filter(item => item.classList.contains('duplicate-card')).length;
+        if (dupCount > 0) {
+            dupContainer.innerHTML = `
+                <div class="dup-summary-box">
+                    <div class="dup-count-text">
+                        <i class="fa-solid fa-circle-exclamation" style="font-size:18px;"></i>
+                        현재 <strong>${dupCount}개</strong>의 중복된 기사가 발견되었습니다.
+                    </div>
+                    <button class="dup-cleanup-btn" onclick="window.cleanupDuplicates()">
+                        <i class="fa-solid fa-broom" style="margin-right:5px;"></i> 중복 기사 일괄 정리
+                    </button>
+                </div>`;
+        } else {
+            dupContainer.innerHTML = '';
+        }
+    }
 
     const totalItems = listItems.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
@@ -391,6 +409,16 @@ window.addAdminNewsSlot = function() {
     window.renderAdminNewsPage(1); // 새로 추가 후 1페이지로 이동시켜 보여줌
 };
 
+window.cleanupDuplicates = function() {
+    if(!confirm('중복으로 감지된 기사들을 모두 삭제하시겠습니까?\n(가장 최근에 수집된 기사 1개만 남기고 정리됩니다.)')) return;
+    
+    const dupItems = document.querySelectorAll('#adm-news-list .duplicate-card');
+    dupItems.forEach(item => item.remove());
+    
+    window.renderAdminNewsPage(1);
+    alert('중복 기사가 정리되었습니다. [저장] 버튼을 눌러야 최종 반영됩니다.');
+};
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // Admin Subtle Trigger & Login Close logic
@@ -442,79 +470,99 @@ document.addEventListener('DOMContentLoaded', () => {
         const status = document.getElementById('save-status');
         const saveBtn = document.getElementById('btn-final-save');
         
-        status.innerText = '저장 중...'; 
+        status.innerText = '⚙️ 데이터 정제 및 준비 중...'; 
         status.style.display = 'block';
-        status.style.color = 'var(--primary)';
+        status.style.color = '#4338ca';
         saveBtn.disabled = true;
 
-        // 타임아웃 감시 (전송이 10초 이상 지연될 경우 안내)
+        // 타임아웃 감시 (전송이 12초 이상 지연될 경우 안내)
         const saveTimeout = setTimeout(() => {
             if (saveBtn.disabled) {
-                status.innerText = '⚠️ 응답이 지연되고 있습니다. 네트워크 상태를 확인해 주세요.';
+                status.innerText = '⚠️ 응답이 지연되고 있습니다. 네트워크 상태를 확인하거나 잠시 후 다시 시도해 주세요.';
                 status.style.color = '#f59e0b';
                 saveBtn.disabled = false;
             }
         }, 12000);
 
-        // Collect Videos
-        appState.content.ytIds = Array.from(document.querySelectorAll('.yt-id-val')).map(i => i.value).filter(v => v);
-        // Deprecated single ytId for old code compatibility
-        appState.content.ytId = appState.content.ytIds[0] || '';
-
-        // Collect Texts
-        textFields.forEach(f => {
-            appState.content[f.id] = {
-                text:  document.getElementById(`adm-txt-${f.id}`).value,
-                sz:    document.getElementById(`adm-sz-${f.id}`).value,
-                col:   document.getElementById(`adm-col-${f.id}`).value,
-                align: document.getElementById(`adm-align-${f.id}`).value,
-                font:  document.getElementById(`adm-font-${f.id}`).value
-            };
-        });
-
-        // Collect Images
-        const collectImgs = (listId, key) => {
-            appState.images[key] = []; appState.images[`${key}Desc`] = [];
-            document.querySelectorAll(`#${listId} > div`).forEach(div => {
-                appState.images[key].push(div.querySelector('.img-url').value);
-                appState.images[`${key}Desc`].push(div.querySelector('.img-desc').value);
-            });
-        }
-        collectImgs('adm-img-list-c', 'ceremony');
-        collectImgs('adm-img-list-o', 'office');
-
-        appState.news = Array.from(document.querySelectorAll('#adm-news-list > div')).map(div => ({
-            date:  div.querySelector('.news-date').value,
-            tag:   div.querySelector('.news-tag').value,
-            title: div.querySelector('.news-title').value,
-            url:   div.querySelector('.news-url').value
-        })).filter(n => n.title);
-
-        // Collect Dynamic Texts
-        appState.dynamicTexts = Array.from(document.querySelectorAll('#adm-extra-text-list > div')).map(div => ({
-            title: div.querySelector('.extra-text-title').value,
-            body:  div.querySelector('.extra-text-body').value
-        })).filter(t => t.title || t.body);
-
         try {
+            // Collect Videos
+            appState.content.ytIds = Array.from(document.querySelectorAll('.yt-id-val')).map(i => i.value).filter(v => v);
+            appState.content.ytId = appState.content.ytIds[0] || '';
+
+            // Collect Texts
+            textFields.forEach(f => {
+                appState.content[f.id] = {
+                    text:  document.getElementById(`adm-txt-${f.id}`).value,
+                    sz:    document.getElementById(`adm-sz-${f.id}`).value,
+                    col:   document.getElementById(`adm-col-${f.id}`).value,
+                    align: document.getElementById(`adm-align-${f.id}`).value,
+                    font:  document.getElementById(`adm-font-${f.id}`).value
+                };
+            });
+
+            // Collect Images
+            const collectImgs = (listId, key) => {
+                appState.images[key] = []; appState.images[`${key}Desc`] = [];
+                document.querySelectorAll(`#${listId} > div`).forEach(div => {
+                    const url = div.querySelector('.img-url').value;
+                    const desc = div.querySelector('.img-desc').value;
+                    if(url) {
+                        appState.images[key].push(url);
+                        appState.images[`${key}Desc`].push(desc);
+                    }
+                });
+            }
+            collectImgs('adm-img-list-c', 'ceremony');
+            collectImgs('adm-img-list-o', 'office');
+
+            status.innerText = '📡 서버로 전송 중... (잠시만 기다려 주세요)';
+            
+            appState.news = Array.from(document.querySelectorAll('#adm-news-list > div')).map(div => ({
+                date:  div.querySelector('.news-date').value,
+                tag:   div.querySelector('.news-tag').value,
+                title: div.querySelector('.news-title').value,
+                url:   div.querySelector('.news-url').value
+            })).filter(n => n.title);
+
+            // Collect Dynamic Texts
+            appState.dynamicTexts = Array.from(document.querySelectorAll('#adm-extra-text-list > div')).map(div => ({
+                title: div.querySelector('.extra-text-title').value,
+                body:  div.querySelector('.extra-text-body').value
+            })).filter(t => t.title || t.body);
+
+            // [최적화] 중복 기사 자동 필터링 (저장 직전 마지막 안전장치)
+            const uniqueNews = [];
+            const seenT = new Set();
+            const seenU = new Set();
+            appState.news.forEach(n => {
+                const nt = n.title.trim().toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
+                const nu = n.url.trim().split('?')[0].split('#')[0];
+                if(!seenT.has(nt) && !seenU.has(nu)) {
+                    uniqueNews.push(n);
+                    seenT.add(nt);
+                    seenU.add(nu);
+                }
+            });
+            appState.news = uniqueNews;
+
             await db.ref('wfirm').set(appState);
             clearTimeout(saveTimeout);
-            status.innerText = '✅ 저장완료';
+            status.innerText = '✅ 모든 변경사항이 저장되었습니다.';
             status.style.color = '#10b981';
             renderAll();
         } catch(e) { 
             clearTimeout(saveTimeout);
             console.error("Save Error:", e);
-            status.innerText = '❌ 저장 중 오류 발생 (데이터 권한 또는 네트워크 확인)';
+            status.innerText = '❌ 저장 실패: 네트워크 오류 또는 데이터 용량 초과';
             status.style.color = '#ef4444';
         }
         
         saveBtn.disabled = false;
         setTimeout(() => {
-            if (status.innerText.includes('완료') || status.innerText.includes('오류')) {
+            if (status.innerText.includes('저장되었습니다') || status.innerText.includes('실패')) {
                 status.style.display='none';
             }
-        }, 4000);
+        }, 3000);
     };
 
     // Interaction Observer for reveal effects
@@ -617,8 +665,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             finalTitle = decodedTitle.substring(0, lastDashIdx).trim(); 
                         }
 
-                        // 엄격한 중복 체크: 제목 또는 URL 중 하나라도 있으면 제외
-                        const isDuplicate = existingTitles.has(finalTitle.trim()) || existingUrls.has(link.trim());
+                        // [기능 추가] 원문 제목 및 URL 정규화 비교 (더 정확한 중복 판정)
+                        const normTitle = finalTitle.trim().toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
+                        const normUrl = link.trim().split('?')[0].split('#')[0];
+
+                        const isDuplicate = Array.from(existingTitles).some(t => t.toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '') === normTitle) || 
+                                          Array.from(existingUrls).some(u => u.trim().split('?')[0].split('#')[0] === normUrl);
 
                         if (!isDuplicate) {
                             appState.news.unshift({
@@ -637,8 +689,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (addedCount > 0) {
                     // 수집 후 날짜순 정렬 보장
                     appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    // 데이터 전송 중 상세 알림
+                    status.innerText = `📡 수집된 ${addedCount}개의 데이터를 서버로 전송 중...`;
                     await db.ref('wfirm').set(appState);
-                    status.innerText = `✅ 완료: ${addedCount}개의 새 뉴스가 즉각 추가되었습니다!`;
+                    
+                    status.innerText = `✅ 완료: ${addedCount}개의 새 뉴스가 추가되었습니다!`;
                     syncToAdmin(); 
                     renderNews(1); 
                 } else {
