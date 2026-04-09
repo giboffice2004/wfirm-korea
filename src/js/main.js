@@ -227,7 +227,9 @@ function syncToAdmin() {
 
             // 중복 기사 우선 -> 그다음 날짜 최신순
             appState.news.sort((a, b) => {
-                if (a.isDuplicate !== b.isDuplicate) return a.isDuplicate ? -1 : 1;
+                const isDupA = a.isDuplicate ? 1 : 0;
+                const isDupB = b.isDuplicate ? 1 : 0;
+                if (isDupA !== isDupB) return isDupB - isDupA;
                 return new Date(b.date) - new Date(a.date);
             });
 
@@ -312,7 +314,7 @@ function syncToAdmin() {
 // Admin News Pagination Logic
 window.adminNewsCurrentPage = 1;
 window.renderAdminNewsPage = function(page) {
-    const itemsPerPage = 6;
+    const itemsPerPage = 9;
     const pagination = document.getElementById('adm-news-pagination');
     if (!pagination) return;
 
@@ -361,11 +363,15 @@ window.renderAdminNewsPage = function(page) {
         // [2] 검색 필터링 및 페이지네이션 대상 선별
         let viewItems = [...allItems];
         
-        // 정렬: 중복 의심 카드가 상단에 오도록 정렬 (DOM 순서 무관하게 배열 정렬)
+        // 정렬: 중복 의심 카드가 상단에 오도록 정렬 -> 그 다음 날짜 최신순
         viewItems.sort((a, b) => {
             const aDup = a.classList.contains('duplicate-card') ? 1 : 0;
             const bDup = b.classList.contains('duplicate-card') ? 1 : 0;
-            return bDup - aDup;
+            if (aDup !== bDup) return bDup - aDup;
+            
+            const aDate = a.querySelector('.news-date')?.value || "";
+            const bDate = b.querySelector('.news-date')?.value || "";
+            return bDate.localeCompare(aDate);
         });
 
         if (searchTerm) {
@@ -410,22 +416,60 @@ window.renderAdminNewsPage = function(page) {
         let endPage = startPage + 4;
         if (endPage > totalPages) endPage = totalPages;
 
-        if (startPage > 1) {
-            const btn = document.createElement('button'); btn.innerText = '‹'; btn.className = 'page-btn';
-            btn.onclick = () => window.renderAdminNewsPage(startPage - 1);
-            pagination.appendChild(btn);
-        }
+        // [추가] 처음으로
+        const firstBtn = document.createElement('button'); 
+        firstBtn.innerText = '«'; firstBtn.className = 'page-btn';
+        firstBtn.title = '처음으로';
+        if (page === 1) firstBtn.disabled = true;
+        firstBtn.onclick = () => window.renderAdminNewsPage(1);
+        pagination.appendChild(firstBtn);
+
+        // [추가] 5페이지 이전 (이전 그룹)
+        const prevBlockBtn = document.createElement('button'); 
+        prevBlockBtn.innerText = '‹‹'; prevBlockBtn.className = 'page-btn';
+        prevBlockBtn.title = '5페이지 이전';
+        if (currentGroup === 1) prevBlockBtn.disabled = true;
+        prevBlockBtn.onclick = () => window.renderAdminNewsPage(startPage - 1);
+        pagination.appendChild(prevBlockBtn);
+
+        // [기존] 1페이지 이전
+        const prevBtn = document.createElement('button'); 
+        prevBtn.innerText = '‹'; prevBtn.className = 'page-btn';
+        prevBtn.title = '이전 페이지';
+        if (page === 1) prevBtn.disabled = true;
+        prevBtn.onclick = () => window.renderAdminNewsPage(page - 1);
+        pagination.appendChild(prevBtn);
+
         for (let i = startPage; i <= endPage; i++) {
             const btn = document.createElement('button'); btn.innerText = i;
             btn.className = `page-btn ${i === page ? 'active' : ''}`;
             btn.onclick = () => window.renderAdminNewsPage(i);
             pagination.appendChild(btn);
         }
-        if (endPage < totalPages) {
-            const btn = document.createElement('button'); btn.innerText = '›'; btn.className = 'page-btn';
-            btn.onclick = () => window.renderAdminNewsPage(endPage + 1);
-            pagination.appendChild(btn);
-        }
+
+        // [기존] 1페이지 다음
+        const nextBtn = document.createElement('button'); 
+        nextBtn.innerText = '›'; nextBtn.className = 'page-btn';
+        nextBtn.title = '다음 페이지';
+        if (page === totalPages) nextBtn.disabled = true;
+        nextBtn.onclick = () => window.renderAdminNewsPage(page + 1);
+        pagination.appendChild(nextBtn);
+
+        // [추가] 5페이지 다음 (다음 그룹)
+        const nextBlockBtn = document.createElement('button'); 
+        nextBlockBtn.innerText = '››'; nextBlockBtn.className = 'page-btn';
+        nextBlockBtn.title = '5페이지 다음';
+        if (endPage === totalPages) nextBlockBtn.disabled = true;
+        nextBlockBtn.onclick = () => window.renderAdminNewsPage(endPage + 1);
+        pagination.appendChild(nextBlockBtn);
+
+        // [추가] 끝으로
+        const lastBtn = document.createElement('button'); 
+        lastBtn.innerText = '»'; lastBtn.className = 'page-btn';
+        lastBtn.title = '끝으로';
+        if (page === totalPages) lastBtn.disabled = true;
+        lastBtn.onclick = () => window.renderAdminNewsPage(totalPages);
+        pagination.appendChild(lastBtn);
     } catch(err) {
         console.error("renderAdminNewsPage Error:", err);
     }

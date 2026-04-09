@@ -2,7 +2,7 @@
    UI Rendering & Component Engine
 ============================================================ */
 
-const NEWS_PER_PAGE = 6;
+const NEWS_PER_PAGE = 9;
 const GALLERY_PER_PAGE = 6;
 
 // Draft Site High-Fidelity Text Configuration (with hl-dark tags)
@@ -188,12 +188,29 @@ function renderNews(page) {
             let endPage = startPage + 4;
             if (endPage > total) endPage = total;
 
-            // 이전 그룹 버튼
-            if (startPage > 1) {
-                const prevBtn = document.createElement('button'); prevBtn.innerText = '‹'; prevBtn.className = 'page-btn';
-                prevBtn.onclick = () => { renderNews(startPage - 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
-                pagin.appendChild(prevBtn);
-            }
+            // [추가] 처음으로 버튼
+            const firstBtn = document.createElement('button'); 
+            firstBtn.innerText = '«'; firstBtn.className = 'page-btn';
+            firstBtn.title = '처음으로';
+            if (page === 1) firstBtn.disabled = true;
+            firstBtn.onclick = () => { renderNews(1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            pagin.appendChild(firstBtn);
+
+            // [추가] 5페이지 이전 버튼 (이전 그룹)
+            const prevBlockBtn = document.createElement('button'); 
+            prevBlockBtn.innerText = '‹‹'; prevBlockBtn.className = 'page-btn';
+            prevBlockBtn.title = '5페이지 이전';
+            if (currentGroup === 1) prevBlockBtn.disabled = true;
+            prevBlockBtn.onclick = () => { renderNews(startPage - 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            pagin.appendChild(prevBlockBtn);
+
+            // [기존] 1페이지 이전 버튼
+            const prevBtn = document.createElement('button'); 
+            prevBtn.innerText = '‹'; prevBtn.className = 'page-btn';
+            prevBtn.title = '이전 페이지';
+            if (page === 1) prevBtn.disabled = true;
+            prevBtn.onclick = () => { renderNews(page - 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            pagin.appendChild(prevBtn);
 
             // 페이지 숫자 버튼
             for(let i=startPage; i<=endPage; i++) {
@@ -203,12 +220,29 @@ function renderNews(page) {
                 pagin.appendChild(btn);
             }
 
-            // 다음 그룹 버튼
-            if (endPage < total) {
-                const nextBtn = document.createElement('button'); nextBtn.innerText = '›'; nextBtn.className = 'page-btn';
-                nextBtn.onclick = () => { renderNews(endPage + 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
-                pagin.appendChild(nextBtn);
-            }
+            // [기존] 1페이지 다음 버튼
+            const nextBtn = document.createElement('button'); 
+            nextBtn.innerText = '›'; nextBtn.className = 'page-btn';
+            nextBtn.title = '다음 페이지';
+            if (page === total) nextBtn.disabled = true;
+            nextBtn.onclick = () => { renderNews(page + 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            pagin.appendChild(nextBtn);
+
+            // [추가] 5페이지 다음 버튼 (다음 그룹)
+            const nextBlockBtn = document.createElement('button'); 
+            nextBlockBtn.innerText = '››'; nextBlockBtn.className = 'page-btn';
+            nextBlockBtn.title = '5페이지 다음';
+            if (endPage === total) nextBlockBtn.disabled = true;
+            nextBlockBtn.onclick = () => { renderNews(endPage + 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            pagin.appendChild(nextBlockBtn);
+
+            // [추가] 끝으로 버튼
+            const lastBtn = document.createElement('button'); 
+            lastBtn.innerText = '»'; lastBtn.className = 'page-btn';
+            lastBtn.title = '끝으로';
+            if (page === total) lastBtn.disabled = true;
+            lastBtn.onclick = () => { renderNews(total); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+            pagin.appendChild(lastBtn);
         }
     }
 
