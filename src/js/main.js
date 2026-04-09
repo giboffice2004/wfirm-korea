@@ -200,7 +200,29 @@ function syncToAdmin() {
         }
 
         if (appState.news) {
-            appState.news.sort((a, b) => new Date(b.date) - new Date(a.date));
+            // [정렬] 중복 기사 감지 및 최상단 배치
+            const seenT = new Map();
+            const seenU = new Map();
+            appState.news.forEach(n => {
+                const nt = n.title.trim().toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
+                const nu = (n.url || "").trim().split('?')[0].split('#')[0].trim();
+                n.isDuplicate = false;
+                if (nt && n.url) {
+                    if (seenT.has(nt) || seenU.has(nu)) {
+                        n.isDuplicate = true;
+                    } else {
+                        seenT.set(nt, true);
+                        seenU.set(nu, true);
+                    }
+                }
+            });
+
+            // 중복 기사 우선 -> 그다음 날짜 최신순
+            appState.news.sort((a, b) => {
+                if (a.isDuplicate !== b.isDuplicate) return a.isDuplicate ? -1 : 1;
+                return new Date(b.date) - new Date(a.date);
+            });
+
             appState.news.forEach(n => {
                 window.addSlot('n');
                 const g = newsList.lastChild;
@@ -330,8 +352,16 @@ window.renderAdminNewsPage = function(page) {
 
         // [2] 검색 필터링 및 페이지네이션 대상 선별
         let viewItems = [...allItems];
+        
+        // 정렬: 중복 의심 카드가 상단에 오도록 정렬 (DOM 순서 무관하게 배열 정렬)
+        viewItems.sort((a, b) => {
+            const aDup = a.classList.contains('duplicate-card') ? 1 : 0;
+            const bDup = b.classList.contains('duplicate-card') ? 1 : 0;
+            return bDup - aDup;
+        });
+
         if (searchTerm) {
-            viewItems = allItems.filter(item => {
+            viewItems = viewItems.filter(item => {
                 const ti = item.querySelector('.news-title')?.value.toLowerCase() || "";
                 const ta = item.querySelector('.news-tag')?.value.toLowerCase() || "";
                 const match = ti.includes(searchTerm) || ta.includes(searchTerm);
@@ -340,25 +370,9 @@ window.renderAdminNewsPage = function(page) {
             });
         }
 
-        // [3] 중복 요약 정보 업데이트
+        // [3] 중복 요약 정보 제거 (사용자 요청: 직접 확인 후 삭제하는 방식으로 변경)
         const dupContainer = document.getElementById('duplicate-summary-container');
-        if (dupContainer) {
-            const dupCount = allItems.filter(item => item.classList.contains('duplicate-card')).length;
-            if (dupCount > 0) {
-                dupContainer.innerHTML = `
-                    <div class="dup-summary-box">
-                        <div class="dup-count-text">
-                            <i class="fa-solid fa-circle-exclamation" style="font-size:18px;"></i>
-                            현재 <strong>${dupCount}개</strong>의 중복된 기사가 발견되었습니다.
-                        </div>
-                        <button class="dup-cleanup-btn" onclick="window.cleanupDuplicates()">
-                            <i class="fa-solid fa-broom" style="margin-right:5px;"></i> 중복 기사 일괄 정리
-                        </button>
-                    </div>`;
-            } else {
-                dupContainer.innerHTML = '';
-            }
-        }
+        if (dupContainer) dupContainer.innerHTML = '';
 
         const totalItems = viewItems.length;
         const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
@@ -535,20 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body:  div.querySelector('.extra-text-body').value
             })).filter(t => t.title || t.body);
 
-            // [최적화] 중복 기사 자동 필터링 (저장 직전 마지막 안전장치)
-            const uniqueNews = [];
-            const seenT = new Set();
-            const seenU = new Set();
-            appState.news.forEach(n => {
-                const nt = n.title.trim().toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
-                const nu = n.url.trim().split('?')[0].split('#')[0];
-                if(!seenT.has(nt) && !seenU.has(nu)) {
-                    uniqueNews.push(n);
-                    seenT.add(nt);
-                    seenU.add(nu);
-                }
-            });
-            appState.news = uniqueNews;
+            // [사용자 요청] 중복 기사 자동 필터링 기능 제거 (사용자가 직접 확인 후 관리)
 
             await db.ref('wfirm').set(appState);
             clearTimeout(saveTimeout);

@@ -133,53 +133,81 @@ function renderNews(page) {
     }
 
     // [3] 정렬 처리 (Sorting)
+    // 중복 기사 감지 (제목 및 URL 기준)
+    const seenTitles = new Map();
+    const seenUrls = new Map();
+    
+    // 원본 데이터의 순서를 유지하며 중복 여부 판단 (오래된 것이 중복으로 처리됨)
+    newsList.forEach(n => {
+        const normTitle = n.title.trim().toLowerCase().replace(/[^a-zA-Z0-9가-힣]/g, '');
+        const normUrl = (n.url || "").trim().split('?')[0].split('#')[0].trim();
+        n.isDuplicate = false;
+
+        if (normTitle && n.url) {
+            if (seenTitles.has(normTitle) || seenUrls.has(normUrl)) {
+                n.isDuplicate = true;
+            } else {
+                seenTitles.set(normTitle, true);
+                seenUrls.set(normUrl, true);
+            }
+        }
+    });
+
     newsList.sort((a,b) => {
+        // 1순위: 중복 기사가 맨 위로
+        if (a.isDuplicate !== b.isDuplicate) return a.isDuplicate ? -1 : 1;
+        // 2순위: 날짜 내림차순(최신순)
         const da = a.date || "";
         const db = b.date || "";
-        // 날짜가 같을 경우 제목순으로 2차 정렬하여 정렬 안정성 확보
         if (da === db) return a.title.localeCompare(b.title);
         return sortVal === 'desc' ? db.localeCompare(da) : da.localeCompare(db);
     });
 
     const start = (page - 1) * NEWS_PER_PAGE;
-    
-    // [중복 제거 공정] 제목 또는 URL이 겹치는 기사는 1개만 남김 (Safety Net)
-    const uniqueNews = [];
-    const seenTitles = new Set();
-    const seenUrls = new Set();
-    
-    newsList.forEach(n => {
-        const titleKey = n.title.trim().toLowerCase();
-        const urlKey = n.url.trim().toLowerCase();
-        if (!seenTitles.has(titleKey) && !seenUrls.has(urlKey)) {
-            uniqueNews.push(n);
-            seenTitles.add(titleKey);
-            seenUrls.add(urlKey);
-        }
-    });
-
-    const items = uniqueNews.slice(start, start + NEWS_PER_PAGE);
+    const items = newsList.slice(start, start + NEWS_PER_PAGE);
     
     container.innerHTML = items.length ? '' : '<p style="text-align:center; grid-column:1/-1; padding:60px; font-weight:800;">조건에 맞는 뉴스가 없습니다.</p>';
     items.forEach(n => {
         const card = document.createElement('div');
-        card.className = 'news-card';
-        if(n.url) card.onclick = () => window.open(n.url, '_blank');
-        card.innerHTML = `<div class="news-meta"><span class="date">${n.date}</span><span class="source">${n.tag||'UPDATE'}</span></div><div class="news-title">${n.title}</div>`;
+        card.className = 'news-card' + (n.isDuplicate ? ' duplicate-mode' : '');
+        if (n.url) card.onclick = () => window.open(n.url, '_blank');
+        
+        let dupBadge = n.isDuplicate ? '<span style="background:#ef4444; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px; margin-right:8px; vertical-align:middle;">중복 의심</span>' : '';
+        card.innerHTML = `<div class="news-meta"><span class="date">${n.date}</span><span class="source">${dupBadge}${n.tag||'UPDATE'}</span></div><div class="news-title">${n.title}</div>`;
         container.appendChild(card);
     });
 
-    // 페이지네이션 활성화 (중복 제거된 리스트 기준)
-    const total = Math.ceil(uniqueNews.length / NEWS_PER_PAGE);
+    // 페이지네이션 활성화 (1-5개씩 그룹화)
+    const total = Math.ceil(newsList.length / NEWS_PER_PAGE);
     const pagin = document.getElementById('news-pagination');
     if(pagin) {
         pagin.innerHTML = '';
         if(total > 1) {
-            for(let i=1; i<=total; i++) {
+            const currentGroup = Math.ceil(page / 5);
+            const startPage = (currentGroup - 1) * 5 + 1;
+            let endPage = startPage + 4;
+            if (endPage > total) endPage = total;
+
+            // 이전 그룹 버튼
+            if (startPage > 1) {
+                const prevBtn = document.createElement('button'); prevBtn.innerText = '‹'; prevBtn.className = 'page-btn';
+                prevBtn.onclick = () => { renderNews(startPage - 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+                pagin.appendChild(prevBtn);
+            }
+
+            // 페이지 숫자 버튼
+            for(let i=startPage; i<=endPage; i++) {
                 const btn = document.createElement('button'); btn.innerText = i; 
                 btn.className = 'page-btn' + (i===page?' active':'');
                 btn.onclick = () => { renderNews(i); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
                 pagin.appendChild(btn);
+            }
+
+            // 다음 그룹 버튼
+            if (endPage < total) {
+                const nextBtn = document.createElement('button'); nextBtn.innerText = '›'; nextBtn.className = 'page-btn';
+                nextBtn.onclick = () => { renderNews(endPage + 1); document.getElementById('news').scrollIntoView({behavior:'smooth'}); };
+                pagin.appendChild(nextBtn);
             }
         }
     }
