@@ -128,10 +128,16 @@ async function scrapeNews() {
             appState.news = appState.news.slice(0, 200);
         }
 
+        // 🕒 마지막 자동 수집 시간 기록
+        appState.lastAutoScrapeTime = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+
         await ref.set(appState);
         console.log(`✅ [수집 완료] 총 ${addedCount}개의 신규 뉴스가 안전하게 저장되었습니다.`);
     } else {
-        console.log(`ℹ️ [상태 확인] 이미 모든 뉴스가 최신 상태입니다. (추가할 새로운 소식 없음)`);
+        // 데이터 변화가 없더라도 실행 시간은 기록함 (작동 확인용)
+        appState.lastAutoScrapeTime = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+        await ref.set(appState);
+        console.log(`ℹ️ [상태 확인] 이미 모든 뉴스가 최신 상태입니다. (실행 시간 기록 완료)`);
     }
     
     console.log('--- 🎉 WFIRM Korea 자동 수집 엔진 종료 ---');

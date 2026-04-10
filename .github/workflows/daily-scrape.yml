@@ -3,7 +3,7 @@ name: Daily News Scrape
 on:
   schedule:
     # 매일 한국시간(KST) 오전 9:00 = UTC 0:00
-    - cron: '0 0 * * *'
+    - cron: '0 23 * * *'
   
   # 관리자가 GitHub 환경에서 언제든 강제 실행 가능하도록 허용
   workflow_dispatch:
